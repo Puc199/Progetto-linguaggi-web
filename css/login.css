@@ -1,0 +1,217 @@
+/* =========================
+SFONDO AREA AUTH
+========================= */
+body.auth-page {
+background:
+radial-gradient(circle at top left, rgba(11, 95, 151, 0.10), transparent 28%),
+radial-gradient(circle at bottom right, rgba(243, 154, 5, 0.12), transparent 24%),
+linear-gradient(180deg, #edf3f8 0%, #f8fbfe 100%);
+}
+
+/* =========================
+CONTENITORE CENTRALE
+========================= */
+.login-shell {
+min-height: 100dvh;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: clamp(20px, 4vw, 32px) clamp(14px, 3vw, 18px);
+}
+.login-card {
+width: 100%;
+max-width: min(92%, 520px);
+background: rgba(255, 255, 255, 0.96);
+border: 1px solid rgba(217, 230, 240, 0.95);
+border-radius: clamp(20px, 3vw, 26px);
+box-shadow: 0 20px 45px rgba(10, 52, 84, 0.14);
+padding: clamp(24px, 3.5vw, 34px) clamp(20px, 3vw, 30px) clamp(20px, 2.5vw, 28px);
+backdrop-filter: blur(8px);
+}
+
+/* =========================
+HEADER LOGIN / REGISTRA
+========================= */
+.login-brand {
+text-align: center;
+margin-bottom: clamp(18px, 3vw, 24px);
+}
+.login-brand img {
+width: clamp(160px, 25vw, 220px);
+max-width: 100%;
+height: auto;
+display: block;
+margin: 0 auto clamp(10px, 1.5vw, 12px);
+}
+.login-brand h1 {
+margin: 0;
+font-size: clamp(1.5rem, 3vw + 0.5rem, 2rem);
+color: #081f34;
+}
+.login-brand p {
+margin: clamp(8px, 1.2vw, 10px) auto 0;
+max-width: 34ch;
+color: var(--color-text-muted);
+line-height: 1.6;
+font-size: clamp(0.9rem, 0.8vw + 0.5rem, 0.98rem);
+}
+
+/* =========================
+FORM LOGIN / REGISTRA
+========================= */
+.login-form {
+margin-top: clamp(8px, 1.2vw, 10px);
+}
+.login-form label {
+display: block;
+margin-top: clamp(12px, 2vw, 16px);
+margin-bottom: clamp(6px, 1vw, 8px);
+text-align: left;
+color: var(--color-text);
+font-weight: 700;
+font-size: clamp(0.9rem, 0.8vw, 0.96rem);
+}
+.login-form input,
+.login-form select {
+display: block;
+width: 100%;
+padding: clamp(12px, 1.5vw, 14px) clamp(12px, 2vw, 15px);
+border: 1px solid var(--color-border);
+border-radius: clamp(12px, 1.5vw, 14px);
+background: #fff;
+color: var(--color-text);
+font-size: clamp(0.9rem, 0.8vw + 0.6rem, 0.98rem);
+transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+min-height: 44px;
+}
+.login-form input::placeholder {
+color: #8ca0b1;
+}
+.login-form input:focus,
+.login-form select:focus {
+outline: none;
+border-color: var(--color-primary);
+box-shadow: 0 0 0 4px rgba(11, 95, 151, 0.10);
+transform: translateY(-1px);
+}
+
+/* =========================
+PULSANTE PRINCIPALE
+========================= */
+.wrap {
+display: flex;
+justify-content: center;
+align-items: center;
+margin-top: clamp(16px, 2.5vw, 22px);
+}
+.wrap button,
+.auth-submit {
+width: 100%;
+border: none;
+border-radius: clamp(12px, 1.5vw, 14px);
+padding: clamp(12px, 1.5vw, 14px) clamp(14px, 2vw, 18px);
+font-size: clamp(0.9rem, 0.8vw + 0.6rem, 1rem);
+font-weight: 700;
+color: #fff;
+cursor: pointer;
+background: linear-gradient(180deg, #f7a61b 0%, var(--color-accent) 100%);
+box-shadow: 0 12px 24px rgba(243, 154, 5, 0.24);
+transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+min-height: 44px;
+}
+.wrap button:hover,
+.auth-submit:hover {
+background: linear-gradient(180deg, #f0a000 0%, var(--color-accent-dark) 100%);
+transform: translateY(-2px);
+box-shadow: 0 16px 28px rgba(243, 154, 5, 0.28);
+}
+.wrap button:active,
+.auth-submit:active {
+transform: translateY(0);
+}
+
+/* =========================
+LINK SECONDARI
+========================= */
+.login-links {
+margin-top: clamp(16px, 2.5vw, 22px);
+display: flex;
+flex-direction: column;
+gap: clamp(8px, 1.2vw, 10px);
+align-items: center;
+}
+.login-links a {
+color: var(--color-primary);
+text-decoration: none;
+font-weight: 700;
+transition: color 0.2s ease;
+}
+.login-links a:hover {
+color: var(--color-primary-dark);
+text-decoration: underline;
+}
+
+/* =========================
+MESSAGGI ERRORE / SUCCESSO
+========================= */
+.alert {
+border-radius: clamp(12px, 1.5vw, 14px);
+padding: clamp(10px, 1.5vw, 13px) clamp(12px, 2vw, 14px);
+margin-bottom: clamp(14px, 2.5vw, 18px);
+font-weight: 700;
+text-align: center;
+font-size: clamp(0.85rem, 0.8vw, 0.95rem);
+}
+.alert-danger {
+background: #fff1ef;
+border: 1px solid #f1d1ca;
+color: #c14937;
+}
+.alert-success {
+background: #ecf8f1;
+border: 1px solid #c8e7d3;
+color: #1f7a43;
+}
+
+/* =========================
+REGISTRA.PHP
+piccoli aggiustamenti
+========================= */
+.register-card .login-brand p {
+max-width: 40ch;
+}
+.register-card .login-form input[type="date"] {
+color: var(--color-text);
+}
+
+/* =========================
+RESPONSIVE AUTH
+========================= */
+@media (max-width: 640px) {
+.login-shell {
+padding: clamp(14px, 2.5vw, 18px) clamp(12px, 2vw, 14px);
+}
+.login-card {
+    padding: clamp(20px, 3vw, 26px) clamp(14px, 2.5vw, 18px) clamp(16px, 2vw, 22px);
+    border-radius: clamp(16px, 2.5vw, 20px);
+}
+
+.login-brand img {
+    width: clamp(140px, 30vw, 180px);
+}
+
+.login-brand h1 {
+    font-size: clamp(1.3rem, 3vw + 0.5rem, 1.7rem);
+}
+
+.login-brand p {
+    font-size: clamp(0.85rem, 1vw + 0.3rem, 0.95rem);
+}
+
+.login-form input,
+.login-form select,
+.wrap button,
+.auth-submit {
+    font-size: 16px;
+}
+}
