@@ -122,6 +122,6 @@ window.location.href = "login.php";
 <?php endif; ?>
 }
 </script>
-<script src="js/script.js"></script>
+<script src="js/home.js"></script>
 </body>
 </html>
