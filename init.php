@@ -18,7 +18,6 @@ function aggiornaEventiScaduti(PDO $pdo): void
         ");
         $stmt->execute();
     } catch (Throwable $e) {
-        // niente output qui per non rompere le pagine
     }
 }
 
