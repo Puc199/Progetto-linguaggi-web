@@ -22,13 +22,24 @@ if ($id_replica <= 0) {
 }
 
 try {
-    $sql = "SELECT es.id, es.id_evento, es.id_replica_evento, es.id_settore,
-                   es.prezzo, es.posti_totali, es.posti_disponibili,
-                   s.nome AS nome_settore
-            FROM evento_settore es
-            JOIN settore s ON es.id_settore = s.id
-            WHERE es.id_replica_evento = ?
-            ORDER BY es.prezzo ASC, s.nome ASC";
+    $sql = "
+    SELECT 
+        es.id,
+        es.id_evento,
+        es.id_replica_evento,
+        es.id_settore,
+        es.prezzo,
+        es.posti_totali,
+        es.posti_disponibili,
+        s.nome AS nome_settore,
+        s.descrizione AS descrizione
+    FROM evento_settore es
+    JOIN settore s ON es.id_settore = s.id
+    JOIN replica_evento r ON es.id_replica_evento = r.id
+    WHERE es.id_replica_evento = ?
+      AND r.stato <> 'annullata'
+    ORDER BY es.prezzo ASC, s.nome ASC
+";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$id_replica]);
     $settori = $stmt->fetchAll();
