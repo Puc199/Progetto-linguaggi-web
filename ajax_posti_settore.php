@@ -23,10 +23,11 @@ if ($id_evento_settore <= 0) {
 
 try {
     $stmt = $pdo->prepare("
-        SELECT posto
-        FROM biglietto
-        WHERE id_evento_settore = ?
-        ORDER BY posto ASC
+    SELECT posto
+    FROM biglietto
+    WHERE id_evento_settore = ?
+      AND disponibilita = 1
+    ORDER BY posto ASC
     ");
     $stmt->execute([$id_evento_settore]);
 
