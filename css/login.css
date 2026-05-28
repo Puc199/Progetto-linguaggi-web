@@ -24,7 +24,6 @@ max-width: min(92%, 520px);
 background: rgba(255, 255, 255, 0.96);
 border: 1px solid rgba(217, 230, 240, 0.95);
 border-radius: clamp(20px, 3vw, 26px);
-box-shadow: 0 20px 45px rgba(10, 52, 84, 0.14);
 padding: clamp(24px, 3.5vw, 34px) clamp(20px, 3vw, 30px) clamp(20px, 2.5vw, 28px);
 backdrop-filter: blur(8px);
 }
@@ -91,7 +90,6 @@ color: #8ca0b1;
 .login-form select:focus {
 outline: none;
 border-color: var(--color-primary);
-box-shadow: 0 0 0 4px rgba(11, 95, 151, 0.10);
 transform: translateY(-1px);
 }
 
@@ -115,7 +113,6 @@ font-weight: 700;
 color: #fff;
 cursor: pointer;
 background: linear-gradient(180deg, #f7a61b 0%, var(--color-accent) 100%);
-box-shadow: 0 12px 24px rgba(243, 154, 5, 0.24);
 transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 min-height: 44px;
 }
