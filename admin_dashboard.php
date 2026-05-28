@@ -1,56 +1,56 @@
 <?php
 require_once 'init.php';
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
+error_reporting(E_ALL); // mostra errori
+ini_set('display_errors', 1); //mostri errori
+//controllo del login, solo il ruolo corretto puo entrare (admin)
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true || (int)($_SESSION['ruolo'] ?? 0) !== 1) {
     header('Location: login.php');
     exit();
 }
-
+//gestisce l'input della foto copertina dell'evento
 function salvaImmagine(?array $file): ?string
-{
+{   //se non viene caricata una foto resta cosi
     if (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
         return null;
     }
-
+    //lancio eccezione in caso di errore
     if ($file['error'] !== UPLOAD_ERR_OK) {
         throw new Exception('Errore upload immagine.');
     }
-
+    //accetto solo queste estensioni 
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
         throw new Exception('Formato immagine non consentito.');
     }
-
+    //creazione della cartella per salvare le immagini caricate
     $dir = __DIR__ . '/img/eventi/';
     if (!is_dir($dir) && !mkdir($dir, 0775, true)) {
         throw new Exception('Impossibile creare la cartella img/eventi.');
     }
-
+    //creazioni del nome del file
     $nome = time() . '_' . preg_replace('/[^a-zA-Z0-9_-]/', '-', pathinfo($file['name'], PATHINFO_FILENAME)) . '.' . $ext;
-    $percorsoFisico = $dir . $nome;
-    $percorsoDb = 'img/eventi/' . $nome;
-
+    $percorsoFisico = $dir . $nome; // salvo in locale
+    $percorsoDb = 'img/eventi/' . $nome; // salvo nel database 
+    //da cartella temporanea a quella definitiva
     if (!move_uploaded_file($file['tmp_name'], $percorsoFisico)) {
         throw new Exception("Errore durante il salvataggio dell'immagine.");
     }
 
     return $percorsoDb;
 }
-
+//recupero le categorie dal db
 function getCategorie(PDO $pdo): array
 {
     $stmt = $pdo->query("SELECT id, nome FROM categoria ORDER BY nome ASC");
     return $stmt->fetchAll();
 }
-
+// recupero i luoghi dal db
 function getLuoghi(PDO $pdo): array
 {
     $stmt = $pdo->query("SELECT id, nome, citta FROM luogo ORDER BY nome ASC");
     return $stmt->fetchAll();
 }
-
+// recupero i settori
 function getSettoriByLuogo(PDO $pdo, int $idLuogo): array
 {
     $stmt = $pdo->prepare("
@@ -62,7 +62,7 @@ function getSettoriByLuogo(PDO $pdo, int $idLuogo): array
     $stmt->execute([$idLuogo]);
     return $stmt->fetchAll();
 }
-
+//recupero tutti i dati
 function getEventiAdmin(PDO $pdo): array
 {
     $sql = "
@@ -95,11 +95,12 @@ $luoghi = getLuoghi($pdo);
 
 $messaggio = '';
 $errore = '';
-
+    //admin invia POST 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $azione = $_POST['azione'] ?? '';
-
+    $azione = $_POST['azione'] ?? ''; //azione dell'admin
+    // se l'azione è aggiungi azione
     if ($azione === 'aggiungi_evento') {
+        //recupero i dati dal form
         $titolo = trim($_POST['titolo'] ?? '');
         $descrizione = trim($_POST['descrizione'] ?? '');
         $id_categoria = (int)($_POST['id_categoria'] ?? 0);
@@ -108,46 +109,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data_fine = trim($_POST['data_fine'] ?? '');
         $orario_spettacolo = trim($_POST['orario_spettacolo'] ?? '');
 
-        try {
+        try { //campi obbligatori
             if ($titolo === '' || $id_categoria <= 0 || $id_luogo <= 0 || $data_inizio === '' || $data_fine === '' || $orario_spettacolo === '') {
                 throw new Exception('Compila tutti i campi obbligatori.');
-            }
-
+            } // condizione della data di fini 
             if ($data_fine < $data_inizio) {
                 throw new Exception('La data fine non può essere precedente alla data inizio.');
             }
+
+            //condizione della data di inizio che non può essere nel passato
+            $now = new DateTime();
+            $dataControllo = new DateTime($data_inizio . ' ' . $orario_spettacolo);
+            if ($dataControllo < $now) {
+                throw new Exception('La data e l\'orario di inizio non possono essere nel passato.');
+            }
+            //controllo del settore per i luoghi
 
             $settoriLuogo = getSettoriByLuogo($pdo, $id_luogo);
             if (empty($settoriLuogo)) {
                 throw new Exception('Il luogo selezionato non ha settori associati.');
             }
-
+            //salvataggio immagine
             $immagine = salvaImmagine($_FILES['immagine'] ?? null);
 
             $pdo->beginTransaction();
-
+            //creo evento
             $stmtEvento = $pdo->prepare("
                 INSERT INTO evento (titolo, descrizione, id_categoria, id_luogo, immagine, stato)
                 VALUES (?, ?, ?, ?, ?, 'programmato')
             ");
             $stmtEvento->execute([
                 $titolo,
-                $descrizione !== '' ? $descrizione : null,
+                $descrizione !== '' ? $descrizione : null, //salvo come null la descrizione vuota 
                 $id_categoria,
                 $id_luogo,
                 $immagine
             ]);
 
-            $id_evento = (int)$pdo->lastInsertId();
+            $id_evento = (int)$pdo->lastInsertId(); //id evento creato
 
             $dataStart = new DateTime($data_inizio);
             $dataEnd = new DateTime($data_fine);
-
+            //query per replica
             $stmtReplica = $pdo->prepare("
                 INSERT INTO replica_evento (id_evento, data_ora_inizio, data_ora_fine, stato)
                 VALUES (?, ?, ?, 'programmata')
             ");
-
+            //query settore
             $stmtEventoSettore = $pdo->prepare("
                 INSERT INTO evento_settore (
                     id_replica_evento,
@@ -158,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     posti_disponibili
                 ) VALUES (?, ?, ?, ?, ?, ?)
             ");
-
+            //in questo modo creo una una replica per ogni giorno tra giorno inizio e giorno fine
             $current = clone $dataStart;
             while ($current <= $dataEnd) {
                 $dataOraInizio = $current->format('Y-m-d') . ' ' . $orario_spettacolo . ':00';
@@ -170,11 +178,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
 
                 $id_replica = (int)$pdo->lastInsertId();
-
+                //per ogni settore creo il record del settore per l'evento
                 foreach ($settoriLuogo as $settore) {
                     $prezzo = (float)$settore['prezzo_base'];
                     $postiTotali = (int)$settore['posti_totali'];
-
+                    // i settori e il prezzo devono essere presenti
                     if ($prezzo <= 0 || $postiTotali <= 0) {
                         continue;
                     }
@@ -191,26 +199,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $current->modify('+1 day');
             }
-
+            //se è tutto ok si continua
             $pdo->commit();
             $messaggio = 'Evento creato con successo.';
         } catch (Throwable $e) {
+            //caso di errore
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             $errore = $e->getMessage();
         }
     }
-
+    //azione elimina evento
     if ($azione === 'elimina_evento') {
     $idEvento = (int)($_POST['id_evento'] ?? 0);
-
+    //errore evento
     if ($idEvento <= 0) {
         $errore = 'Evento non valido.';
     } else {
         try {
             $pdo->beginTransaction();
-
+            //setto evento come annullato
             $stmtEvento = $pdo->prepare("
                 UPDATE evento
                 SET stato = 'annullato'
@@ -222,15 +231,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmtEvento->rowCount() === 0) {
                 throw new Exception('Evento non trovato o già annullato.');
             }
-
+            //elimino tutte le repliche future
             $stmtRepliche = $pdo->prepare("
                 UPDATE replica_evento
                 SET stato = 'annullata'
                 WHERE id_evento = ?
-                  AND stato = 'programmata'
+                AND data_ora_inizio > NOW() 
             ");
             $stmtRepliche->execute([$idEvento]);
-
+            // query per gli eventi che devono essere rimborsati
             $stmtRimborsi = $pdo->prepare("
                 SELECT
                     b.id AS id_biglietto,
@@ -246,13 +255,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmtRimborsi->execute([$idEvento]);
             $bigliettiDaRimborsare = $stmtRimborsi->fetchAll();
-
+            //rimborso effettivo
             $stmtAggiornaSaldo = $pdo->prepare("
                 UPDATE utente
                 SET saldo = saldo + ?
                 WHERE id = ?
             ");
-
             $stmtAggiornaBiglietto = $pdo->prepare("
                 UPDATE biglietto
                 SET disponibilita = 0,
