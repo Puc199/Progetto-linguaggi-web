@@ -1,13 +1,19 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // === ELEMENTI DEL DOM ===
     const walletForm = document.getElementById('wallet-form');
     const walletMessage = document.getElementById('wallet-message');
     const walletSaldo = document.getElementById('wallet-saldo');
     const walletSaldoTop = document.getElementById('wallet-saldo-top');
+    const toggleHiddenBtn = document.getElementById('toggle-hidden-btn');
+    const ticketsGrid = document.querySelector('.tickets-grid');
+    const ticketsSection = document.querySelector('.tickets-section');
 
+    // ==========================================
+    // 1️⃣ GESTIONE RICARICA WALLET
+    // ==========================================
     if (walletForm) {
         walletForm.addEventListener('submit', async function (e) {
             e.preventDefault();
-
             const formData = new FormData(walletForm);
 
             try {
@@ -15,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     method: 'POST',
                     body: formData
                 });
-
                 const data = await response.json();
 
                 walletMessage.style.display = 'block';
@@ -40,10 +45,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // ==========================================
+    // 2️⃣ GESTIONE ELIMINAZIONE BIGLIETTO
+    // ==========================================
     document.querySelectorAll('.delete-ticket-btn').forEach(button => {
         button.addEventListener('click', async function () {
             const ticketId = this.dataset.ticketId;
-
             if (!ticketId) return;
             if (!confirm('Vuoi davvero eliminare questo biglietto e ricevere il rimborso?')) return;
 
@@ -53,7 +60,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: ticketId })
                 });
-
                 const data = await response.json();
 
                 if (!data.success) {
@@ -64,6 +70,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 const card = document.getElementById('ticket-card-' + ticketId);
                 if (card) {
                     card.remove();
+                    // Pulizia localStorage
+                    let hidden = JSON.parse(localStorage.getItem('hiddenTickets') || '[]');
+                    hidden = hidden.filter(id => id != ticketId);
+                    localStorage.setItem('hiddenTickets', JSON.stringify(hidden));
                 }
 
                 if (data.nuovo_saldo) {
@@ -78,4 +88,123 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    // ==========================================
+    // 3️⃣ NOTIFICA RIMBORSO (Dati iniettati da PHP)
+    // ==========================================
+    const rimborsiEl = document.getElementById('rimborsi-data');
+    if (rimborsiEl) {
+        try {
+            const rimborsiRaw = rimborsiEl.dataset.rimborsi;
+            const rimborsiDaNotificare = JSON.parse(rimborsiRaw || '[]');
+
+            rimborsiDaNotificare.forEach(biglietto => {
+                const storageKey = 'rimborso_visto_' + biglietto.ticket_id;
+                if (!localStorage.getItem(storageKey)) {
+                    const dataFormattata = new Date(biglietto.data_evento).toLocaleString('it-IT', {
+                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+                    alert(`🔔 NOTIFICA RIMBORSO:\n\nL'evento "${biglietto.nome_evento}" del ${dataFormattata} è stato annullato.\nIl rimborso è stato accreditato sul tuo Wallet.`);
+                    localStorage.setItem(storageKey, 'true');
+                }
+            });
+        } catch (e) {
+            console.error("Errore nella lettura dei rimborsi:", e);
+        }
+    }
+
+    // ==========================================
+    // 4️⃣ NASCONDI / MOSTRA BIGLIETTI (Client-Side)
+    // ==========================================
+    let hiddenTickets = JSON.parse(localStorage.getItem('hiddenTickets') || '[]');
+
+    // Funzione per mostrare/nascondere la empty-card quando tutti i biglietti sono nascosti
+    function updateEmptyCardVisibility() {
+        const allCards = document.querySelectorAll('.ticket-card');
+        const visibleCards = document.querySelectorAll('.ticket-card:not([style*="display: none"])');
+        
+        // Rimuovi eventuali empty-card dinamiche già presenti
+        const existingEmpty = ticketsSection?.querySelector('.empty-card-dynamic');
+        if (existingEmpty) existingEmpty.remove();
+
+        if (allCards.length > 0 && visibleCards.length === 0) {
+            // Tutti nascosti → mostra empty-card
+            if (ticketsGrid) ticketsGrid.style.display = 'none';
+            
+            const emptyCard = document.createElement('div');
+            emptyCard.className = 'empty-card empty-card-dynamic';
+            emptyCard.innerHTML = `
+                <h3>Nessun biglietto visibile</h3>
+                <p>Hai nascosto tutti i biglietti. Clicca sul pulsante sopra per mostrarli di nuovo.</p>
+                <button type="button" id="show-all-from-empty" class="hero-cta" style="border:none;cursor:pointer;background:#0b5f97;color:white;padding:10px 20px;border-radius:6px;">
+                    👁️ Mostra tutti i biglietti
+                </button>
+            `;
+            ticketsSection?.appendChild(emptyCard);
+
+            // Listener per il pulsante "Mostra tutti"
+            document.getElementById('show-all-from-empty')?.addEventListener('click', function() {
+                localStorage.removeItem('hiddenTickets');
+                hiddenTickets = [];
+                document.querySelectorAll('.ticket-card').forEach(card => card.style.display = '');
+                if (ticketsGrid) ticketsGrid.style.display = 'flex';
+                emptyCard.remove();
+                updateEmptyCardVisibility();
+                if (toggleHiddenBtn) toggleHiddenBtn.style.display = 'none';
+            });
+        } else {
+            // Ci sono biglietti visibili → nascondi empty-card e mostra griglia
+            if (ticketsGrid) ticketsGrid.style.display = 'flex';
+        }
+    }
+
+    // Funzione principale per applicare lo stato "nascosto"
+    function applyHiddenState() {
+        // Prima mostra tutte le card, poi nascondi quelle in lista
+        document.querySelectorAll('.ticket-card').forEach(card => card.style.display = '');
+        
+        hiddenTickets.forEach(id => {
+            const card = document.getElementById(`ticket-card-${id}`);
+            if (card) card.style.display = 'none';
+        });
+
+        // Aggiorna visibilità pulsante globale
+        if (toggleHiddenBtn) {
+            toggleHiddenBtn.style.display = hiddenTickets.length > 0 ? 'inline-block' : 'none';
+        }
+
+        // Controlla se serve la empty-card
+        updateEmptyCardVisibility();
+    }
+
+    // Listener per pulsanti "👁️ Nascondi" su singole card
+    document.querySelectorAll('.hide-ticket-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const ticketId = this.dataset.ticketId;
+            const card = document.getElementById(`ticket-card-${ticketId}`);
+            if (card) {
+                card.style.display = 'none';
+                if (!hiddenTickets.includes(ticketId)) {
+                    hiddenTickets.push(ticketId);
+                    localStorage.setItem('hiddenTickets', JSON.stringify(hiddenTickets));
+                }
+                applyHiddenState();
+            }
+        });
+    });
+
+    // Listener per pulsante globale "Mostra biglietti nascosti"
+    if (toggleHiddenBtn) {
+        toggleHiddenBtn.addEventListener('click', function () {
+            localStorage.removeItem('hiddenTickets');
+            hiddenTickets = [];
+            document.querySelectorAll('.ticket-card').forEach(card => card.style.display = '');
+            if (ticketsGrid) ticketsGrid.style.display = 'flex';
+            this.style.display = 'none';
+            updateEmptyCardVisibility();
+        });
+    }
+
+    // Esegui all'avvio della pagina
+    applyHiddenState();
 });
