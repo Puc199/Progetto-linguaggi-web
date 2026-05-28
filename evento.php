@@ -55,6 +55,7 @@ function getReplicheEvento(PDO $pdo, int $id_evento): array
         SELECT id, data_ora_inizio, data_ora_fine, stato
         FROM replica_evento
         WHERE id_evento = ?
+          AND stato <> 'annullata'
         ORDER BY data_ora_inizio ASC
     ";
     $stmt = $pdo->prepare($sql);
@@ -257,27 +258,25 @@ if ($selectedSettore) {
         <?php else: ?>
             <div class="admin-list">
                 <?php foreach ($repliche as $replica): ?>
-                    <div class="admin-list-item">
-                        <div>
-                            <strong><?php echo esc(formatDataReplica($replica['data_ora_inizio'])); ?></strong>
-                            <span>
-                                <?php if (!empty($replica['data_ora_fine'])): ?>
-                                    · Fine <?php echo esc(formatDataReplica($replica['data_ora_fine'])); ?>
-                                <?php else: ?>
-                                    · Stato <?php echo esc($replica['stato']); ?>
-                                <?php endif; ?>
-                            </span>
-                        </div>
-
-                        <div>
-                            <button
-                                type="button"
-                                class="hero-cta replica-button"
-                                onclick="window.location.href='evento.php?id=<?php echo $id_evento; ?>&replica=<?php echo (int)$replica['id']; ?>#sector-list'">
-                                Seleziona
-                            </button>
-                        </div>
+                <div class="admin-list-item">
+                    <div>
+                        <strong><?php echo esc(formatDataReplica($replica['data_ora_inizio'])); ?></strong>
+                        <span>
+                            <?php if (!empty($replica['data_ora_fine'])): ?>
+                                · Fine <?php echo esc(formatDataReplica($replica['data_ora_fine'])); ?>
+                            <?php else: ?>
+                                · Stato <?php echo esc($replica['stato']); ?>
+                            <?php endif; ?>
+                        </span>
                     </div>
+                    <div>
+                        <button type="button" class="hero-cta replica-button"
+                            data-replica-id="<?php echo (int)$replica['id']; ?>"
+                            data-replica-label="<?php echo esc(formatDataReplica($replica['data_ora_inizio'])); ?>">
+                            Seleziona
+                        </button>
+                    </div>
+                </div>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
@@ -294,174 +293,52 @@ if ($selectedSettore) {
             </p>
         </div>
 
-        <div class="matches-grid" id="sector-list">
-            <?php if (!empty($settori)): ?>
-                <?php foreach ($settori as $settore): ?>
-                    <div class="match-card">
-                        <div class="match-card-top">
-                            <span class="match-badge"><?php echo esc($settore['nome_settore']); ?></span>
-                            <span class="match-date">€ <?php echo number_format((float)$settore['prezzo'], 2, ',', '.'); ?></span>
-                        </div>
-
-                        <div class="match-details" style="padding-top: 18px;">
-                            <h3><?php echo esc($settore['nome_settore']); ?></h3>
-                            <p>
-                                Posti disponibili:
-                                <?php echo (int)$settore['posti_disponibili']; ?>
-                                /
-                                <?php echo (int)$settore['posti_totali']; ?>
-                            </p>
-                        </div>
-
-                        <div class="match-card-bottom">
-                            <button
-                                type="button"
-                                class="match-action sector-button"
-                                onclick="window.location.href='evento.php?id=<?php echo $id_evento; ?>&replica=<?php echo $id_replica; ?>&settore=<?php echo (int)$settore['id']; ?>#ticket-app'">
-                                Scegli questo settore
-                            </button>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="empty-state">
-                    <h3>Nessun settore selezionato</h3>
-                    <p>Scegli prima una replica per vedere i settori disponibili.</p>
-                </div>
-            <?php endif; ?>
-        </div>
+        <div class="event-grid" id="sector-list">
+    <div class="empty-state">
+        <h3>Seleziona una replica</h3>
+        <p>I settori disponibili appariranno qui.</p>
+    </div>
+</div>
     </section>
 
-    <?php if ($selectedSettore): ?>
-        <section class="section-block">
-            <div class="section-heading">
-                <h2>Completa acquisto</h2>
-                <p>
-                    Settore selezionato: <?php echo esc($selectedSettore['nome_settore']); ?>
-                    · Prezzo per biglietto: € <?php echo number_format((float)$selectedSettore['prezzo'], 2, ',', '.'); ?>
-                </p>
-            </div>
+    <section class="section-block" id="purchase-section" style="display:none;">
+    <div class="section-heading">
+        <h2>Completa acquisto</h2>
+        <p>
+            Settore: <span id="purchase-settore"></span>
+            · Prezzo: <span id="purchase-prezzo"></span>
+        </p>
+    </div>
 
-            <?php if ((int)$selectedSettore['posti_disponibili'] <= 0): ?>
-                <div class="empty-state">
-                    <h3>Posti finiti</h3>
-                    <p>Non ci sono più posti disponibili per questo settore.</p>
-                </div>
-            <?php else: ?>
-                <form action="checkout.php" method="post" class="admin-card" id="ticket-app">
-                    <input type="hidden" name="id_evento" value="<?php echo (int)$evento['id']; ?>">
-                    <input type="hidden" name="id_evento_settore" value="<?php echo (int)$selectedSettore['id']; ?>">
+    <form action="checkout.php" method="post" class="admin-card" id="purchase-form">
+        <input type="hidden" name="id_evento" value="<?php echo (int)$evento['id']; ?>">
+        <input type="hidden" name="id_evento_settore" id="selected-evento-settore" value="0">
+        <input type="hidden" name="posti" id="purchase-posti-hidden">
 
-                    <div class="admin-form-group">
-                        <label>Seleziona i posti</label>
+        <div class="admin-form-group">
+            <label>Seleziona i posti</label>
+            <div class="seat-grid" id="seat-grid"></div>
+            <small class="seat-legend">Grigio = disponibile · Arancione = selezionato · Rosso = occupato</small>
+        </div>
 
-                        <div class="seat-grid">
-                            <?php for ($i = 1; $i <= (int)$selectedSettore['posti_totali']; $i++): ?>
-                                <?php $occupato = in_array($i, $postiOccupati, true); ?>
+        <div class="admin-form-group">
+            <label>Totale preventivo</label>
+            <input type="text" id="purchase-prezzo-input" value="€ 0,00" readonly>
+        </div>
 
-                                <?php if ($occupato): ?>
-                                    <span class="seat-pill seat-occupied">P<?php echo $i; ?></span>
-                                <?php else: ?>
-                                    <label class="seat-pill seat-available">
-                                        <input
-                                            type="checkbox"
-                                            class="seat-checkbox"
-                                            name="posti[]"
-                                            value="<?php echo $i; ?>"
-                                        >
-                                        <span>P<?php echo $i; ?></span>
-                                    </label>
-                                <?php endif; ?>
-                            <?php endfor; ?>
-                        </div>
+        <div class="admin-form-group">
+            <label>Posti selezionati</label>
+            <input type="text" id="purchase-posti-display" value="Nessuno" readonly>
+        </div>
 
-                        <small class="seat-legend">
-                            Grigio = disponibile · Arancione = selezionato · Rosso = occupato
-                        </small>
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label>Prezzo per biglietto</label>
-                        <input
-                            type="text"
-                            id="prezzo-unitario-display"
-                            value="€ <?php echo number_format((float)$selectedSettore['prezzo'], 2, ',', '.'); ?>"
-                            readonly
-                        >
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label>Totale preventivo</label>
-                        <input type="text" id="totale-preventivo" value="€ 0,00" readonly>
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label>Posti selezionati</label>
-                        <input type="text" id="posti-selezionati-display" value="Nessuno" readonly>
-                    </div>
-
-                    <div class="admin-form-group">
-                        <label>Posti disponibili</label>
-                        <input type="text" value="<?php echo (int)$selectedSettore['posti_disponibili']; ?>" readonly>
-                    </div>
-
-                    <button type="submit" class="admin-submit">Vai al checkout</button>
-                </form>
-            <?php endif; ?>
-        </section>
-    <?php endif; ?>
+        <button type="submit" class="admin-submit">Vai al checkout</button>
+    </form>
+</section>
 </main>
 
 <footer class="site-footer">
     <p>&copy; 2026 EasyTicket</p>
 </footer>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const seatCheckboxes = document.querySelectorAll('.seat-checkbox');
-    const totalePreventivo = document.getElementById('totale-preventivo');
-    const postiDisplay = document.getElementById('posti-selezionati-display');
-    const form = document.getElementById('ticket-app');
-    const prezzoUnitario = <?php echo $selectedSettore ? (float)$selectedSettore['prezzo'] : 0; ?>;
-
-    function aggiornaRiepilogo() {
-        const selezionati = Array.from(seatCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => parseInt(cb.value, 10))
-            .sort((a, b) => a - b);
-
-        const totale = selezionati.length * prezzoUnitario;
-
-        if (totalePreventivo) {
-            totalePreventivo.value = '€ ' + totale.toLocaleString('it-IT', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-        }
-
-        if (postiDisplay) {
-            postiDisplay.value = selezionati.length > 0
-                ? selezionati.map(p => 'P' + p).join(', ')
-                : 'Nessuno';
-        }
-    }
-
-    seatCheckboxes.forEach(cb => {
-        cb.addEventListener('change', aggiornaRiepilogo);
-    });
-
-    if (form) {
-        form.addEventListener('submit', function (e) {
-            const almenoUno = Array.from(seatCheckboxes).some(cb => cb.checked);
-            if (!almenoUno) {
-                e.preventDefault();
-                alert('Seleziona almeno un posto prima di andare al checkout.');
-            }
-        });
-    }
-
-    aggiornaRiepilogo();
-});
-</script>
+<script src="js/evento.js"></script>
 </body>
 </html>
