@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="login-links">
                     <a href="login.php">Torna al login</a>
-                    <a href="register.php">Non hai un account? Registrati</a>
+                    <a href="registra.php">Non hai un account? Registrati</a>
                 </div>
             </form>
         </section>
