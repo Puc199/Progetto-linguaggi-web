@@ -1,24 +1,24 @@
 <?php
 require_once 'init.php';
-
+//controllo login
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     header("Location: login.php");
     exit();
 }
 
 $username = $_SESSION['username'] ?? '';
-if ($username === '') {
+if ($username === '') { //reindirizza al login se non c'è username
     header("Location: login.php");
     exit();
 }
-
+//acquisisce dati del biglietto
 $ticketDetails = $_SESSION['ticket_info'] ?? [];
-
+//se non ci sono dati allora vado ad user_dashboard
 if (empty($ticketDetails) || !is_array($ticketDetails)) {
     header("Location: User_dashboard.php");
     exit();
 }
-
+//dati singoli
 $utente = $ticketDetails['utente'] ?? [];
 $nomeEvento = $ticketDetails['evento'] ?? 'Acquisto confermato';
 $settore = $ticketDetails['settore'] ?? 'N/D';
@@ -29,23 +29,23 @@ $oraReplica = $ticketDetails['ora_replica'] ?? 'N/D';
 $totale = $ticketDetails['totale'] ?? '0,00';
 $numeroBiglietti = (int)($ticketDetails['quantita'] ?? 0);
 
-$posti = [];
-$sigilli = [];
+$posti = []; //array numeri posti
+$sigilli = []; // array sigilli fiscali
 
 if (!empty($ticketDetails['biglietti']) && is_array($ticketDetails['biglietti'])) {
     foreach ($ticketDetails['biglietti'] as $b) {
-        if (isset($b['posto'])) {
+        if (isset($b['posto'])) { //scrive P davanti al numero del posto
             $posti[] = 'P' . (int)$b['posto'];
         }
-        if (!empty($b['sigillo_fiscale'])) {
+        if (!empty($b['sigillo_fiscale'])) { 
             $sigilli[] = $b['sigillo_fiscale'];
         }
     }
 }
-
+// converto gli array in stringhe leggibili
 $postoStr = !empty($posti) ? implode(', ', $posti) : 'N/D';
 $sigilloStr = !empty($sigilli) ? implode(', ', $sigilli) : 'N/D';
-
+// pulizia della sessione
 unset($_SESSION['ticket_info']);
 ?>
 <!DOCTYPE html>
@@ -55,12 +55,12 @@ unset($_SESSION['ticket_info']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conferma Acquisto - EasyTicket</title>
     <link rel="stylesheet" href="css/base.css?v=2">
-    <link rel="stylesheet" href="css/confermation.css?v=2">
+    <link rel="stylesheet" href="css/confirmation.css?v=2">
     <link rel="icon" type="image/png" href="img/icn_sito_sf.png">
 </head>
 <body>
 <main class="confirmation-shell">
-    <section class="confirmation-hero card">
+    <section class="confirmation-hero card"> <!--messaggio dinamico-->
         <div class="confirmation-badge">Acquisto completato</div>
         <h1>Grazie per il tuo acquisto, <?php echo esc($utente['username'] ?? $username); ?>!</h1>
         <p>
