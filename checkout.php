@@ -24,10 +24,11 @@ if ($username === '') {
 
 $idEvento = (int)($_POST['id_evento'] ?? 0);
 $idEventoSettore = (int)($_POST['id_evento_settore'] ?? 0);
-$postiInput = $_POST['posti'] ?? [];
+$postiInput = $_POST['posti'] ?? '';
 
-if (!is_array($postiInput)) {
-    $postiInput = [$postiInput];
+// Trasforma la stringa "1,2,3,4" inviata dal JS in un vero array PHP [1, 2, 3, 4]
+if (is_string($postiInput)) {
+    $postiInput = $postiInput !== '' ? explode(',', $postiInput) : [];
 }
 
 $posti = array_map('intval', $postiInput);
@@ -242,37 +243,6 @@ try {
     </section>
 </main>
 
-<script>
-let secondsLeft = 300;
-const timerEl = document.getElementById('checkout-timer');
-const timerBox = document.getElementById('checkout-timer-box');
-const confirmBtn = document.getElementById('checkout-confirm-btn');
-
-function updateTimer() {
-    const min = Math.floor(secondsLeft / 60);
-    const sec = secondsLeft % 60;
-
-    if (timerEl) {
-        timerEl.textContent = String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
-    }
-
-    if (secondsLeft <= 0) {
-        clearInterval(timerInterval);
-        if (timerBox) {
-            timerBox.classList.add('expired');
-        }
-        if (confirmBtn) {
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = 'Tempo scaduto';
-        }
-        return;
-    }
-
-    secondsLeft--;
-}
-
-updateTimer();
-const timerInterval = setInterval(updateTimer, 1000);
-</script>
+<script src="js/checkout.js" defer></script>
 </body>
 </html>
