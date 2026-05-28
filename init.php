@@ -2,7 +2,8 @@
 session_start();
 require_once 'db.php';
 
-function aggiornaEventiScaduti(PDO $pdo): void
+function aggiornaEventiScaduti(PDO $pdo): void // funzione che aggiorna lo stato dell'evento a completato quando la sua ultima replica è finita
+
 {
     try {
         $stmt = $pdo->prepare("
@@ -16,14 +17,15 @@ function aggiornaEventiScaduti(PDO $pdo): void
             WHERE e.stato = 'programmato'
               AND r.ultima_replica < NOW()
         ");
-        $stmt->execute();
+        $stmt->execute(); //esecuzione della query 
     } catch (Throwable $e) {
+        error_log("Errore in aggiornaEventiScaduti: " . $e->getMessage());
     }
 }
 
 aggiornaEventiScaduti($pdo);
 
-// Funzione di sicurezza per output
+// implemento esc() per la sicurezza dei dati 
 function esc($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
