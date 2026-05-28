@@ -1,5 +1,5 @@
 /* =========================
-USER DASHBOARD
+   USER DASHBOARD
 ========================= */
 
 .dashboard-welcome {
@@ -64,8 +64,7 @@ USER DASHBOARD
   margin-bottom: 2.75rem;
 }
 
-.wallet-card,
-.wallet-box {
+.wallet-card {
   background: linear-gradient(135deg, #ffffff 0%, #f8fbfd 100%);
   border-radius: var(--radius-lg);
   padding: 2rem;
@@ -80,16 +79,14 @@ USER DASHBOARD
   display: none;
 }
 
-.wallet-card h2,
-.wallet-box span {
+.wallet-card h2 {
   position: relative;
   margin: 0 0 1.25rem 0;
   font-size: 1.5rem;
   color: #000000;
 }
 
-.wallet-balance,
-.wallet-box {
+.wallet-balance {
   position: relative;
   background: #ffffff;
   border: 1px solid rgba(11, 95, 151, 0.18);
@@ -99,8 +96,7 @@ USER DASHBOARD
   color: #0b75b8;
 }
 
-.wallet-balance span,
-.wallet-box span {
+.wallet-balance span {
   display: block;
   margin-bottom: 0.35rem;
   font-size: 0.8rem;
@@ -111,13 +107,12 @@ USER DASHBOARD
   color: #000000;
 }
 
-.wallet-balance strong,
-.wallet-box strong {
+.wallet-balance strong {
   display: block;
   font-size: clamp(2rem, 4vw, 2.7rem);
   line-height: 1;
   font-weight: 800;
-  color: #0b75b8;
+  color: #0b5f97;
 }
 
 .wallet-form {
@@ -156,8 +151,7 @@ USER DASHBOARD
   box-shadow: 0 0 0 3px rgba(11, 95, 151, 0.12);
 }
 
-#wallet-submit-btn,
-.wallet-form .admin-submit {
+#wallet-submit-btn {
   width: 100%;
   padding: 0.95rem 1rem;
   border: none;
@@ -170,17 +164,22 @@ USER DASHBOARD
   transition: transform 0.2s ease, background 0.2s ease;
 }
 
-#wallet-submit-btn:hover,
-.wallet-form .admin-submit:hover {
+#wallet-submit-btn:hover {
   transform: translateY(-2px);
   background: linear-gradient(180deg, #f0a000 0%, var(--color-accent-dark) 100%);
 }
 
-.wallet-message {
-  margin-top: 12px;
+/* Sezione Biglietti */
+/* Messaggio quando tutti i biglietti sono nascosti */
+.all-hidden-message {
+    margin-top: 1.5rem;
+    animation: fadeIn 0.3s ease;
 }
 
-/* Sezione Biglietti */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 .tickets-section {
   margin-top: 2.5rem;
 }
@@ -191,8 +190,7 @@ USER DASHBOARD
   color: var(--color-text);
 }
 
-.tickets-grid,
-.matches-grid {
+.tickets-grid {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -219,47 +217,38 @@ USER DASHBOARD
 }
 
 /* Immagine */
-.ticket-image,
-.ticket-card .match-logos {
+.ticket-image {
   width: 220px;
-  min-width: 220px;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
-  aspect-ratio: auto;
-  height: auto;
 }
 
-.ticket-image img,
-.ticket-card .match-logos img {
+.ticket-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.ticket-number-badge,
-.ticket-card .match-badge {
+.ticket-number-badge {
   position: absolute;
   top: 12px;
   left: 12px;
   background: var(--color-accent);
   color: #ffffff;
-  min-width: 36px;
+  width: 36px;
   height: 36px;
-  padding: 0 12px;
   border-radius: 8px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 0.9rem;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  z-index: 2;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Contenuto */
-.ticket-content,
-.ticket-card .match-details {
+.ticket-content {
   flex: 1;
   padding: 1.4rem 1.6rem;
   display: flex;
@@ -267,8 +256,7 @@ USER DASHBOARD
   justify-content: space-between;
 }
 
-.ticket-content h3,
-.ticket-card .match-details h3 {
+.ticket-content h3 {
   margin: 0;
   font-size: 1.4rem;
   line-height: 1.3;
@@ -276,8 +264,7 @@ USER DASHBOARD
   font-weight: 700;
 }
 
-.ticket-meta,
-.ticket-card .match-details p {
+.ticket-meta {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -299,9 +286,8 @@ USER DASHBOARD
   margin-top: 0.5rem;
 }
 
-/* Bottone hover */
-.ticket-actions-hover,
-.ticket-card .match-card-bottom {
+/* Bottone Elimina - Logica Hover */
+.ticket-actions-hover {
   opacity: 0;
   visibility: hidden;
   transform: translateY(10px);
@@ -311,16 +297,13 @@ USER DASHBOARD
   padding-top: 1rem;
 }
 
-.ticket-card:hover .ticket-actions-hover,
-.ticket-card:hover .match-card-bottom {
+.ticket-card:hover .ticket-actions-hover {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
 }
 
-.btn-delete-hover,
-.delete-ticket-btn,
-.row-remove-btn {
+.btn-delete-hover {
   width: 100%;
   padding: 0.8rem;
   background: #fff1f2;
@@ -333,9 +316,7 @@ USER DASHBOARD
   transition: all 0.2s ease;
 }
 
-.btn-delete-hover:hover,
-.delete-ticket-btn:hover,
-.row-remove-btn:hover {
+.btn-delete-hover:hover {
   background: #d32f2f;
   color: #ffffff;
   border-color: #d32f2f;
@@ -378,88 +359,118 @@ USER DASHBOARD
   color: var(--color-text-muted);
 }
 
-/* Stati annullato */
+/* =========================
+   STATI BIGLIETTO (ANNULLATO/RIMBORSATO)
+========================= */
+.hide-ticket-btn {
+    margin-top: 8px;
+    background: transparent;
+    border: 1px dashed #9ca3af;
+    color: #6b7280;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s;
+}
+.hide-ticket-btn:hover {
+    background: #f3f4f6;
+    border-color: #6b7280;
+    color: #374151;
+}
+
+/* Card annullata: grigia, opaca */
 .ticket-card.cancelled {
   background: #f8f9fa;
   border-color: #dee2e6;
-  filter: grayscale(100%);
-  opacity: 0.8;
-  pointer-events: none;
+  /* pointer-events: none rimosso per permettere il click sul pulsante Nascondi */
 }
 
+/* Disabilita l'effetto hover sulla card annullata */
 .ticket-card.cancelled:hover {
   transform: none;
   box-shadow: var(--shadow-sm);
   border-color: #dee2e6;
 }
 
-.cancelled-stamp {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-30deg);
-  background-color: rgba(220, 53, 69, 0.9);
-  color: white;
-  padding: 10px 20px;
-  font-size: 1.2rem;
-  font-weight: 800;
-  border: 3px solid white;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  z-index: 10;
-  text-transform: uppercase;
-  letter-spacing: 2px;
+/* Applica grigio e trasparenza SOLO all'immagine */
+.ticket-card.cancelled .ticket-image img {
+  filter: grayscale(100%);
+  opacity: 0.6;
 }
 
+/* Applica colori spenti SOLO ai testi e al prezzo */
+.ticket-card.cancelled .ticket-content h3,
+.ticket-card.cancelled .ticket-meta span,
+.ticket-card.cancelled .ticket-price-new {
+  color: #8a9ba8;
+  opacity: 0.7;
+}
+
+/* MESSAGGIO VERDE - DEVE ESSERE BRILLANTE E NON SBiadito */
 .ticket-refund-msg {
   margin-top: 1rem;
-  padding: 10px;
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
+  padding: 12px 16px;
+  background-color: #28a745;
+  color: #ffffff;
+  border: 1px solid #1e7e34;
   border-radius: 5px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   text-align: center;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+  opacity: 1 !important;
+  filter: none !important;
 }
 
-.ticket-card.cancelled .ticket-info h3,
-.ticket-card.cancelled .match-details h3 {
+/* Titolo evento barrato se annullato */
+.ticket-card.cancelled .ticket-content h3 {
   text-decoration: line-through;
-  color: #6c757d;
 }
 
+/* Overlay "NON VALIDO" sul QR Code */
 .qr-overlay {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(220, 53, 69, 0.9);
+  background: rgba(220, 53, 69, 0.95);
   color: white;
   font-size: 0.7rem;
   font-weight: bold;
   padding: 4px 8px;
   border-radius: 4px;
   pointer-events: none;
+  z-index: 11;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.ticket-card.cancelled .ticket-actions-hover,
-.ticket-card.cancelled .match-card-bottom {
+/* Nasconde definitivamente il bottone elimina per gli eventi annullati */
+.ticket-card.cancelled .ticket-actions-hover {
   display: none !important;
 }
 
-/* Responsive */
+/* ✅ REGOLA AGGIUNTA: Forza il click sul pulsante Nascondi anche dentro card annullate */
+.ticket-card.cancelled .hide-ticket-btn {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  z-index: 20;
+  position: relative;
+  user-select: none;
+}
+
+/* Responsive per Mobile */
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
   }
 
-  .wallet-card,
-  .wallet-box {
+  .wallet-card {
     padding: 1.4rem;
   }
 
-  .wallet-balance strong,
-  .wallet-box strong {
+  .wallet-balance strong {
     font-size: 2.1rem;
   }
 
@@ -467,10 +478,8 @@ USER DASHBOARD
     flex-direction: column;
   }
 
-  .ticket-image,
-  .ticket-card .match-logos {
+  .ticket-image {
     width: 100%;
-    min-width: 100%;
     height: 200px;
   }
 
@@ -481,62 +490,9 @@ USER DASHBOARD
     padding: 1rem;
   }
 
-  .ticket-actions-hover,
-  .ticket-card .match-card-bottom {
+  .ticket-actions-hover {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
   }
-}
-/* ===== STATO RIMBORSATO ===== */
-
-/* Card Rimborsata: Bordo verde, leggermente trasparente */
-.ticket-card.refunded {
-    background: #f8f9fa;
-    border: 2px solid #28a745;
-    opacity: 0.85;
-    pointer-events: none; /* Disabilita i click */
-}
-
-/* Disabilita hover sulla card rimborsata */
-.ticket-card.refunded:hover {
-    transform: none;
-    box-shadow: var(--shadow-sm);
-    border-color: #28a745;
-}
-
-/* Timbro Verde "RIMBORSATO" */
-.refunded-stamp {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-30deg);
-    background-color: rgba(40, 167, 69, 0.9); /* Verde */
-    color: white;
-    padding: 10px 20px;
-    font-size: 1.2rem;
-    font-weight: 800;
-    border: 3px solid white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    z-index: 10;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
-
-/* Messaggio di rimborso (già esistente nel tuo CSS, ma rafforziamo) */
-.refunded-msg {
-    margin-top: 1rem;
-    padding: 12px;
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    text-align: center;
-}
-
-/* Nasconde il pulsante elimina se è già rimborsato */
-.ticket-card.refunded .ticket-actions-hover {
-    display: none !important;
 }
