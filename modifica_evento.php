@@ -4,28 +4,41 @@ require_once 'init.php';
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true || (int)($_SESSION['ruolo'] ?? 0) !== 1) {
-    header("Location: login.php");
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+    header('Location: login.php');
     exit();
 }
 
-function salvaImmagine(?array $file): ?string {
+if ((int)($_SESSION['ruolo'] ?? 0) !== 1) {
+    header('Location: home.php');
+    exit();
+}
+
+$id_evento = (int)($_GET['id'] ?? 0);
+if ($id_evento <= 0) {
+    die('Evento non valido.');
+}
+
+function salvaImmagine(?array $file): ?string
+{
     if (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
         return null;
     }
 
     if ($file['error'] !== UPLOAD_ERR_OK) {
-        throw new Exception("Errore upload immagine.");
+        throw new Exception('Errore upload immagine.');
     }
 
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
-        throw new Exception("Formato immagine non consentito.");
+        throw new Exception('Formato immagine non consentito.');
     }
 
     $dir = __DIR__ . '/img/eventi/';
     if (!is_dir($dir) && !mkdir($dir, 0775, true)) {
-        throw new Exception("Impossibile creare la cartella img/eventi.");
+        throw new Exception('Impossibile creare la cartella img/eventi.');
     }
 
     $nome = time() . '_' . preg_replace('/[^a-zA-Z0-9_-]/', '-', pathinfo($file['name'], PATHINFO_FILENAME)) . '.' . $ext;
@@ -39,164 +52,343 @@ function salvaImmagine(?array $file): ?string {
     return $percorsoDb;
 }
 
-$id_evento = (int)($_GET['id'] ?? 0);
-if ($id_evento <= 0) {
-    die("Evento non valido.");
-}
-
-$messaggio = '';
-$errore = '';
-
-try {
+function getEvento(PDO $pdo, int $id_evento): ?array {
     $stmt = $pdo->prepare("SELECT * FROM evento WHERE id = ? LIMIT 1");
     $stmt->execute([$id_evento]);
-    $evento = $stmt->fetch();
+    return $stmt->fetch() ?: null;
+}
 
-    if (!$evento) {
-        die("Evento non trovato.");
-    }
-} catch (Throwable $e) {
-    die("Errore nel caricamento dell'evento.");
+function getRepliche(PDO $pdo, int $id_evento): array {
+    $stmt = $pdo->prepare("
+        SELECT id, data_ora_inizio, data_ora_fine, stato
+        FROM replica_evento
+        WHERE id_evento = ?
+        ORDER BY data_ora_inizio ASC
+    ");
+    $stmt->execute([$id_evento]);
+    return $stmt->fetchAll();
+}
+
+function getSettoriLuogo(PDO $pdo, int $idLuogo): array {
+    $stmt = $pdo->prepare("
+        SELECT id, nome, descrizione, prezzo_base, posti_totali
+        FROM settore
+        WHERE id_luogo = ?
+        ORDER BY nome ASC
+    ");
+    $stmt->execute([$idLuogo]);
+    return $stmt->fetchAll();
+}
+
+function formatDataOra(?string $value): string {
+    if (!$value) return '';
+    return date('d/m/Y H:i', strtotime($value));
+}
+
+$evento = getEvento($pdo, $id_evento);
+if (!$evento) {
+    die('Evento non trovato.');
+}
+
+$settoriLuogo = [];
+if (isset($evento['id_luogo']) && (int)$evento['id_luogo'] > 0) {
+    $settoriLuogo = getSettoriLuogo($pdo, (int)$evento['id_luogo']);
+}
+
+$errore = '';
+$messaggio = '';
+
+if (isset($_GET['success']) && $_GET['success'] === '1') {
+    $messaggio = 'Operazione completata con successo.';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $azione = $_POST['azione'] ?? '';
+    $azione = trim($_POST['azione'] ?? '');
 
-    if ($azione === 'modifica_evento') {
+    if ($azione === 'modifica_dettagli_evento') {
         $titolo = trim($_POST['titolo'] ?? '');
         $descrizione = trim($_POST['descrizione'] ?? '');
-        $id_categoria = (int)($_POST['id_categoria'] ?? 0);
-        $id_luogo = (int)($_POST['id_luogo'] ?? 0);
 
         try {
-            if ($titolo === '' || $id_categoria <= 0 || $id_luogo <= 0) {
-                throw new Exception("Compila tutti i campi obbligatori dell'evento.");
+            if ($titolo === '') {
+                throw new Exception('Il titolo è obbligatorio.');
             }
 
-            $immagine = $evento['immagine'] ?? null;
             $nuovaImmagine = salvaImmagine($_FILES['immagine'] ?? null);
-
-            if ($nuovaImmagine !== null) {
-                if (!empty($immagine)) {
-                    $vecchioPath = __DIR__ . '/' . ltrim($immagine, '/');
-                    if (is_file($vecchioPath)) {
-                        @unlink($vecchioPath);
-                    }
-                }
-                $immagine = $nuovaImmagine;
-            }
+            $immagineDaSalvare = $nuovaImmagine ?? ($evento['immagine'] ?? null);
 
             $stmt = $pdo->prepare("
                 UPDATE evento
-                SET titolo = ?, descrizione = ?, id_categoria = ?, id_luogo = ?, immagine = ?
+                SET titolo = ?, descrizione = ?, immagine = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$titolo, $descrizione, $id_categoria, $id_luogo, $immagine, $id_evento]);
+            $stmt->execute([
+                $titolo,
+                $descrizione !== '' ? $descrizione : null,
+                $immagineDaSalvare,
+                $id_evento
+            ]);
 
-            $stmt = $pdo->prepare("SELECT * FROM evento WHERE id = ? LIMIT 1");
-            $stmt->execute([$id_evento]);
-            $evento = $stmt->fetch();
-
-            $messaggio = "Evento aggiornato con successo.";
+            header('Location: ' . $_SERVER['PHP_SELF'] . '?id=' . $id_evento . '&success=1');
+            exit();
         } catch (Throwable $e) {
-            $errore = $e->getMessage();
+            $errore = 'Errore durante il salvataggio dei dettagli evento: ' . $e->getMessage();
         }
     }
 
-    if ($azione === 'aggiungi_replica') {
-        $data_ora_inizio = trim($_POST['data_ora_inizio'] ?? '');
-        $data_ora_fine = trim($_POST['data_ora_fine'] ?? '');
+        if ($azione === 'aggiungi_replica') {
+        $dataOraInizio = trim((string)($_POST['data_ora_inizio'] ?? ''));
 
+        if ($dataOraInizio === '') {
+            $errore = 'Inserisci la data e ora di inizio.';
+        } elseif (empty($settoriLuogo)) {
+            $errore = 'Il luogo associato all evento non ha settori configurati.';
+        } else {
+            try {
+                $pdo->beginTransaction();
+
+                $dataOraInizioSql = str_replace('T', ' ', $dataOraInizio);
+                if (strlen($dataOraInizioSql) === 16) {
+                    $dataOraInizioSql .= ':00';
+                }
+
+                $dataOraFineSql = null;
+                if ($dataOraFine !== '') {
+                    $dataOraFineSql = str_replace('T', ' ', $dataOraFine);
+                    if (strlen($dataOraFineSql) === 16) {
+                        $dataOraFineSql .= ':00';
+                    }
+                }
+
+                $pdo->prepare("
+                    INSERT INTO replica_evento (id_evento, data_ora_inizio, data_ora_fine, stato)
+                    VALUES (?, ?, ?, 'programmata')
+                ")->execute([$id_evento, $dataOraInizioSql, $dataOraFineSql]);
+
+                $idReplica = (int)$pdo->lastInsertId();
+
+                $stmtInsertES = $pdo->prepare("
+                    INSERT INTO evento_settore (
+                        id_replica_evento,
+                        id_evento,
+                        id_settore,
+                        prezzo,
+                        posti_totali,
+                        posti_disponibili
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                ");
+
+                foreach ($settoriLuogo as $settore) {
+                    $idSettore = (int)$settore['id'];
+                    $postiTotali = (int)$settore['posti_totali'];
+                    $prezzo = (float)$settore['prezzo_base'];
+
+                    if ($prezzo <= 0 || $postiTotali <= 0) {
+                        continue;
+                    }
+
+                    $stmtInsertES->execute([
+                        $idReplica,
+                        $id_evento,
+                        $idSettore,
+                        $prezzo,
+                        $postiTotali,
+                        $postiTotali
+                    ]);
+                }
+
+                $pdo->commit();
+                header('Location: ' . $_SERVER['PHP_SELF'] . '?id=' . $id_evento . '&success=1');
+                exit();
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $errore = 'Errore durante l aggiunta della replica: ' . $e->getMessage();
+            }
+        }
+    }
+
+    if ($azione === 'annulla_replica') {
+        
+    $idReplica = (int)($_POST['id_replica'] ?? 0);
+
+    if ($idReplica <= 0) {
+        $errore = 'ID replica non valido.';
+    } else {
         try {
-            if ($data_ora_inizio === '') {
-                throw new Exception("Inserisci almeno data e ora di inizio per la replica.");
+            $pdo->beginTransaction();
+
+            // 1. Annulla la replica
+            $stmt = $pdo->prepare("
+                UPDATE replica_evento
+                SET stato = 'annullata'
+                WHERE id = ? AND id_evento = ?
+            ");
+            $stmt->execute([$idReplica, $id_evento]);
+
+            if ($stmt->rowCount() === 0) {
+                throw new Exception('Nessuna replica trovata con questi criteri.');
             }
 
-            $data_ora_inizio_sql = str_replace('T', ' ', $data_ora_inizio) . ':00';
-            $data_ora_fine_sql = ($data_ora_fine !== '') ? str_replace('T', ' ', $data_ora_fine) . ':00' : null;
-
-            $stmt = $pdo->prepare("
-                INSERT INTO replica_evento (id_evento, data_ora_inizio, data_ora_fine, stato)
-                VALUES (?, ?, ?, 'programmata')
+            // 2. Recupera tutti i biglietti da rimborsare per quella replica
+            $stmtRimborsi = $pdo->prepare("
+                SELECT b.id AS id_biglietto, b.id_utente, b.prezzo
+                FROM biglietto b
+                INNER JOIN evento_settore es ON b.id_evento_settore = es.id
+                WHERE es.id_replica_evento = ?
+                  AND b.stato_rimborso = 'nessuno'
+                  AND b.disponibilita = 1
             ");
-            $stmt->execute([$id_evento, $data_ora_inizio_sql, $data_ora_fine_sql]);
+            $stmtRimborsi->execute([$idReplica]);
+            $bigliettiDaRimborsare = $stmtRimborsi->fetchAll(PDO::FETCH_ASSOC);
 
-            $messaggio = "Replica aggiunta con successo.";
+            $stmtAggiornaSaldo = $pdo->prepare("
+                UPDATE utente
+                SET saldo = saldo + ?
+                WHERE id = ?
+            ");
+
+            $stmtAggiornaBiglietto = $pdo->prepare("
+                UPDATE biglietto
+                SET disponibilita = 0,
+                    stato_rimborso = 'rimborsato'
+                WHERE id = ?
+            ");
+
+            $stmtNotifica = $pdo->prepare("
+                INSERT INTO notifica (id_utente, titolo, messaggio)
+                VALUES (?, ?, ?)
+            ");
+
+            $stmtInserisciRimborso = $pdo->prepare("
+                INSERT INTO rimborsi (id_biglietto, id_utente, importo, stato, motivo, data_elaborazione)
+                VALUES (?, ?, ?, 'completato', 'Replica annullata', NOW())
+            ");
+
+            foreach ($bigliettiDaRimborsare as $b) {
+                $idBiglietto = (int)$b['id_biglietto'];
+                $idUtente = (int)$b['id_utente'];
+                $importo = (float)$b['prezzo'];
+
+                $stmtAggiornaSaldo->execute([$importo, $idUtente]);
+                $stmtAggiornaBiglietto->execute([$idBiglietto]);
+                $stmtInserisciRimborso->execute([$idBiglietto, $idUtente, $importo]);
+
+                $stmtNotifica->execute([
+                    $idUtente,
+                    'Rimborso automatico effettuato',
+                    'La replica annullata ha generato un rimborso automatico di € ' .
+                    number_format($importo, 2, ',', '.') .
+                    ' sul tuo wallet.'
+                ]);
+            }
+
+            $pdo->commit();
+            header('Location: ' . $_SERVER['PHP_SELF'] . '?id=' . $id_evento . '&success=1');
+            exit;
+
         } catch (Throwable $e) {
-            $errore = $e->getMessage();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $errore = 'Errore durante l\\annullamento della replica: ' . $e->getMessage();
+        }
+    }
+}
+
+    if ($azione === 'riattiva_replica') {
+        $idReplica = (int)($_POST['id_replica'] ?? 0);
+
+        if ($idReplica <= 0) {
+            $errore = 'ID replica non valido.';
+        } else {
+            try {
+                $stmt = $pdo->prepare("
+                    UPDATE replica_evento
+                    SET stato = 'programmata'
+                    WHERE id = ? AND id_evento = ?
+                ");
+                $stmt->execute([$idReplica, $id_evento]);
+
+                if ($stmt->rowCount() === 0) {
+                    throw new Exception('Nessuna replica trovata con questi criteri.');
+                }
+
+                header('Location: ' . $_SERVER['PHP_SELF'] . '?id=' . $id_evento . '&success=1');
+                exit();
+            } catch (Throwable $e) {
+                $errore = 'Errore durante la riattivazione: ' . $e->getMessage();
+            }
         }
     }
 
     if ($azione === 'elimina_replica') {
-        $id_replica = (int)($_POST['id_replica'] ?? 0);
+        $idReplica = (int)($_POST['id_replica'] ?? 0);
 
         try {
-            if ($id_replica <= 0) {
-                throw new Exception("Replica non valida.");
+            if ($idReplica <= 0) {
+                throw new Exception('ID replica non valido.');
             }
 
-            $stmt = $pdo->prepare("
-                SELECT COUNT(*) 
-                FROM biglietto b
+            $pdo->beginTransaction();
+
+            $stmtUpdate = $pdo->prepare("
+                UPDATE biglietto b
                 INNER JOIN evento_settore es ON b.id_evento_settore = es.id
+                SET b.stato_rimborso = 'rimborsato',
+                    b.disponibilita = 0
                 WHERE es.id_replica_evento = ?
+                  AND b.stato_rimborso = 'nessuno'
             ");
-            $stmt->execute([$id_replica]);
-            $numeroBiglietti = (int)$stmt->fetchColumn();
+            $stmtUpdate->execute([$idReplica]);
 
-            if ($numeroBiglietti > 0) {
-                throw new Exception("Non puoi eliminare questa replica: ci sono già biglietti acquistati.");
+            $pdo->prepare("
+                DELETE FROM evento_settore
+                WHERE id_replica_evento = ? AND id_evento = ?
+            ")->execute([$idReplica, $id_evento]);
+
+            $stmtDel = $pdo->prepare("
+                DELETE FROM replica_evento
+                WHERE id = ? AND id_evento = ?
+            ");
+            $stmtDel->execute([$idReplica, $id_evento]);
+
+            if ($stmtDel->rowCount() !== 1) {
+                throw new Exception('Replica non trovata o già eliminata.');
             }
 
-            $stmt = $pdo->prepare("DELETE FROM replica_evento WHERE id = ? AND id_evento = ?");
-            $stmt->execute([$id_replica, $id_evento]);
+            $pdo->commit();
 
-            $messaggio = "Replica eliminata con successo.";
+            header('Location: ' . $_SERVER['PHP_SELF'] . '?id=' . $id_evento . '&success=1');
+            exit();
         } catch (Throwable $e) {
-            $errore = $e->getMessage();
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $errore = 'Errore durante l eliminazione: ' . $e->getMessage();
         }
     }
 }
 
-$categorie = $pdo->query("SELECT id, nome FROM categoria ORDER BY nome ASC")->fetchAll();
-$luoghi = $pdo->query("SELECT id, nome, citta FROM luogo ORDER BY citta ASC, nome ASC")->fetchAll();
-
-$stmt = $pdo->prepare("
-    SELECT id, data_ora_inizio, data_ora_fine, stato
-    FROM replica_evento
-    WHERE id_evento = ?
-    ORDER BY data_ora_inizio ASC
-");
-$stmt->execute([$id_evento]);
-$repliche = $stmt->fetchAll();
-
-$stmt = $pdo->prepare("
-    SELECT MIN(data_ora_inizio)
-    FROM replica_evento
-    WHERE id_evento = ?
-");
-$stmt->execute([$id_evento]);
-$primaData = $stmt->fetchColumn();
+$repliche = getRepliche($pdo, $id_evento);
 ?>
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modifica Evento - EasyTicket</title>
-    <link rel="icon" type="image/x-icon" href="img/icn_sito_sf.png">
+    <title>Modifica evento - EasyTicket</title>
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link rel="icon" type="image/png" href="img/icn_sito_sf.png">
 </head>
 <body>
 <header class="site-header">
     <div class="header-inner">
-        <a href="home.php" class="brand">
-            <img src="img/logo_sito.png" alt="Logo EasyTicket">
-        </a>
-
+        <a href="home.php" class="brand"><img src="img/logo_sito.png" alt="Logo EasyTicket"></a>
         <nav class="user-nav">
-            <a href="admin_dashboard.php" class="user-pill primary-pill"><?php echo esc($_SESSION['username'] ?? 'admin'); ?></a>
+            <a href="admin_dashboard.php" class="user-pill primary-pill">Dashboard</a>
             <a href="logout.php" class="user-pill secondary-pill">Logout</a>
         </nav>
     </div>
@@ -206,91 +398,80 @@ $primaData = $stmt->fetchColumn();
     <section class="section-block">
         <div class="section-heading">
             <h2>Modifica evento</h2>
-            <p>Gestisci dati principali e repliche dell'evento selezionato.</p>
+            <p>Gestisci dettagli e repliche.</p>
         </div>
 
-        <?php if ($messaggio !== ""): ?>
-            <div class="admin-card" style="margin-bottom:20px;">
-                <?php echo esc($messaggio); ?>
+        <?php if ($errore !== ''): ?>
+            <div class="admin-card msg-ko" style="margin-bottom:20px; border-left: 4px solid #dc3545;">
+                <strong>Errore:</strong> <?php echo esc($errore); ?>
             </div>
         <?php endif; ?>
 
-        <?php if ($errore !== ""): ?>
-            <div class="admin-card" style="margin-bottom:20px; border-color:#f1d1ca; color:#c13d2a;">
-                <?php echo esc($errore); ?>
+        <?php if ($messaggio !== ''): ?>
+            <div class="admin-card msg-ok" style="margin-bottom:20px; border-left: 4px solid #28a745;">
+                <strong>Successo:</strong> <?php echo esc($messaggio); ?>
             </div>
         <?php endif; ?>
+    </section>
 
-        <div class="admin-grid">
-            <div class="admin-card">
-                <h3>Dati evento</h3>
+    <section class="section-block">
+        <div class="section-heading">
+            <h2>Dettagli evento</h2>
+            <p>Modifica titolo, descrizione e immagine.</p>
+        </div>
 
-                <form action="modifica_evento.php?id=<?php echo $id_evento; ?>" method="post" enctype="multipart/form-data">
-                    <input type="hidden" name="azione" value="modifica_evento">
+        <div class="admin-card">
+            <form method="post" enctype="multipart/form-data" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>?id=<?php echo $id_evento; ?>">
+                <input type="hidden" name="azione" value="modifica_dettagli_evento">
 
+                <div class="admin-form-group">
                     <label for="titolo">Titolo evento</label>
-                    <input type="text" id="titolo" name="titolo" value="<?php echo esc($evento['titolo']); ?>" required>
+                    <input type="text" id="titolo" name="titolo" required value="<?php echo esc($evento['titolo'] ?? ''); ?>">
+                </div>
 
+                <div class="admin-form-group">
                     <label for="descrizione">Descrizione</label>
-                    <textarea id="descrizione" name="descrizione"><?php echo esc($evento['descrizione'] ?? ''); ?></textarea>
+                    <textarea id="descrizione" name="descrizione" rows="5"><?php echo esc($evento['descrizione'] ?? ''); ?></textarea>
+                </div>
 
-                    <label for="id_categoria">Categoria</label>
-                    <select id="id_categoria" name="id_categoria" required>
-                        <?php foreach ($categorie as $cat): ?>
-                            <option value="<?php echo (int)$cat['id']; ?>" <?php echo ((int)$evento['id_categoria'] === (int)$cat['id']) ? 'selected' : ''; ?>>
-                                <?php echo esc($cat['nome']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                <div class="admin-form-group">
+                    <label for="immagine">Immagine evento</label>
+                    <?php if (!empty($evento['immagine'])): ?>
+                        <div style="margin-bottom:10px;">
+                            <img src="<?php echo esc($evento['immagine']); ?>" alt="<?php echo esc($evento['titolo'] ?? 'Evento'); ?>" style="max-width:220px; border-radius:8px;">
+                        </div>
+                    <?php endif; ?>
+                    <input type="file" id="immagine" name="immagine" accept=".jpg,.jpeg,.png,.webp">
+                    <small>Lascia vuoto se non vuoi cambiare immagine.</small>
+                </div>
 
-                    <label for="id_luogo">Luogo</label>
-                    <select id="id_luogo" name="id_luogo" required>
-                        <?php foreach ($luoghi as $luogo): ?>
-                            <option value="<?php echo (int)$luogo['id']; ?>" <?php echo ((int)$evento['id_luogo'] === (int)$luogo['id']) ? 'selected' : ''; ?>>
-                                <?php echo esc($luogo['citta'] . " - " . $luogo['nome']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-
-                    <label for="immagine">Nuova immagine evento</label>
-                    <input type="file" id="immagine" name="immagine" accept="image/*">
-
-                    <button type="submit" class="primary-btn">Salva modifiche evento</button>
-                </form>
-            </div>
-
-            <div class="admin-card">
-                <h3>Anteprima</h3>
-                <?php if (!empty($evento['immagine'])): ?>
-                    <img src="<?php echo esc($evento['immagine']); ?>" alt="<?php echo esc($evento['titolo']); ?>" width="220">
-                <?php else: ?>
-                    <img src="img/evento-default.png" alt="Evento" width="220">
-                <?php endif; ?>
-
-                <p><strong><?php echo esc($evento['titolo']); ?></strong></p>
-                <p><?php echo esc($evento['descrizione'] ?? 'Nessuna descrizione'); ?></p>
-                <p>Prima replica: <?php echo $primaData ? esc($primaData) : 'Nessuna replica'; ?></p>
-            </div>
+                <button type="submit" class="admin-submit">Salva modifiche</button>
+            </form>
         </div>
     </section>
 
     <section class="section-block">
         <div class="section-heading">
             <h2>Aggiungi replica</h2>
-            <p>Qui puoi inserire più date o più orari per lo stesso evento.</p>
+            <p>Inserisci una nuova data per l'evento. Prezzi e posti vengono letti dal luogo associato.</p>
         </div>
 
         <div class="admin-card">
-            <form action="modifica_evento.php?id=<?php echo $id_evento; ?>" method="post">
+            <form method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>?id=<?php echo $id_evento; ?>">
                 <input type="hidden" name="azione" value="aggiungi_replica">
 
-                <label for="data_ora_inizio">Data e ora inizio</label>
-                <input type="datetime-local" id="data_ora_inizio" name="data_ora_inizio" required>
+                <div class="admin-form-group">
+                    <label for="data_ora_inizio">Data e ora inizio</label>
+                    <input type="datetime-local" id="data_ora_inizio" name="data_ora_inizio" required>
+                </div>
 
-                <label for="data_ora_fine">Data e ora fine (facoltativa)</label>
-                <input type="datetime-local" id="data_ora_fine" name="data_ora_fine">
+                <?php if (empty($settoriLuogo)): ?>
+                    <div class="admin-card" style="margin-top:20px; color:#c13d2a;">
+                        Nessun settore disponibile per il luogo associato.
+                    </div>
+                <?php endif; ?>
 
-                <button type="submit" class="primary-btn">Aggiungi replica</button>
+                <button type="submit" class="admin-submit">Aggiungi replica</button>
             </form>
         </div>
     </section>
@@ -298,7 +479,7 @@ $primaData = $stmt->fetchColumn();
     <section class="section-block">
         <div class="section-heading">
             <h2>Repliche esistenti</h2>
-            <p>Puoi vedere e cancellare le repliche già associate a questo evento.</p>
+            <p>Puoi annullare, riattivare o eliminare una replica.</p>
         </div>
 
         <?php if (!empty($repliche)): ?>
@@ -306,24 +487,34 @@ $primaData = $stmt->fetchColumn();
                 <?php foreach ($repliche as $replica): ?>
                     <div class="admin-list-item">
                         <div>
-                            <strong><?php echo esc($replica['data_ora_inizio']); ?></strong>
+                            <strong><?php echo esc(formatDataOra($replica['data_ora_inizio'])); ?></strong>
                             <?php if (!empty($replica['data_ora_fine'])): ?>
-                                <span> - <?php echo esc($replica['data_ora_fine']); ?></span>
                             <?php endif; ?>
+                            <div>Stato: <strong><?php echo esc($replica['stato']); ?></strong></div>
                         </div>
 
-                        <form action="modifica_evento.php?id=<?php echo $id_evento; ?>" method="post" onsubmit="return confirm('Vuoi davvero eliminare questa replica?');">
-                            <input type="hidden" name="azione" value="elimina_replica">
-                            <input type="hidden" name="id_replica" value="<?php echo (int)$replica['id']; ?>">
-                            <button type="submit" class="secondary-pill">Elimina</button>
-                        </form>
+                        <div class="dashboard-actions">
+                            <?php if (($replica['stato'] ?? '') !== 'annullata'): ?>
+                                <form method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>?id=<?php echo $id_evento; ?>">
+                                    <input type="hidden" name="azione" value="annulla_replica">
+                                    <input type="hidden" name="id_replica" value="<?php echo (int)$replica['id']; ?>">
+                                    <button type="submit" class="admin-delete">Annulla</button>
+                                </form>
+                            <?php else: ?>
+                                <form method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF'], ENT_QUOTES, 'UTF-8'); ?>?id=<?php echo $id_evento; ?>">
+                                    <input type="hidden" name="azione" value="riattiva_replica">
+                                    <input type="hidden" name="id_replica" value="<?php echo (int)$replica['id']; ?>">
+                                    <button type="submit" class="admin-submit">Riattiva</button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
         <?php else: ?>
             <div class="empty-state">
                 <h3>Nessuna replica presente</h3>
-                <p>Aggiungi almeno una replica per permettere la scelta di data e orario.</p>
+                <p>Aggiungi almeno una replica.</p>
             </div>
         <?php endif; ?>
     </section>
@@ -332,5 +523,11 @@ $primaData = $stmt->fetchColumn();
 <footer class="site-footer">
     <p>&copy; 2026 EasyTicket</p>
 </footer>
+
+<script>
+function verificaBiglietti(idReplica) {
+    return confirm('⚠️ ATTENZIONE: stai per eliminare questa replica.\n\nTutti i biglietti acquistati verranno rimborsati automaticamente.\n\nSei sicuro di voler procedere?');
+}
+</script>
 </body>
 </html>
