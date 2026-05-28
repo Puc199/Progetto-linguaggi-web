@@ -188,7 +188,6 @@ BOTTONI E LINK RIUTILIZZABILI
   font-weight: 700;
   padding: clamp(12px, 1.5vw, 14px) clamp(20px, 2.5vw, 26px);
   border-radius: clamp(12px, 1.5vw, 14px);
-  box-shadow: 0 12px 24px rgba(243, 154, 5, 0.28);
   transition: transform 0.2s ease, background 0.2s ease;
   border: none;
   min-height: 44px;
@@ -199,7 +198,7 @@ BOTTONI E LINK RIUTILIZZABILI
   transform: translateY(-2px);
 }
 
-.match-action {
+.event-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -212,7 +211,7 @@ BOTTONI E LINK RIUTILIZZABILI
   min-height: 44px;
 }
 
-.match-action:hover {
+.event-action:hover {
   transform: translateY(-2px);
 }
 
@@ -236,7 +235,7 @@ CARD E COMPONENTI GENERICI
 .ticket-card,
 .empty-card,
 .hero-user-card,
-.match-card,
+.event-card,
 .confirmation-card,
 .checkout-event-card,
 .checkout-seats-card,
@@ -451,7 +450,7 @@ RESPONSIVE GLOBALE
   font-size: clamp(0.8rem, 1vw + 0.2rem, 0.85rem);
 }
 
-.matches-grid {
+.event-grid {
   grid-template-columns: 1fr;
 }
 
