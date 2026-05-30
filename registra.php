@@ -23,7 +23,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $reg_error = "Username già in uso. Scegline un altro.";
             } else {
                 // 2. Inserimento nuovo utente (PDO)
-                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $hash = password_hash($password, PASSWORD_DEFAULT); //in questo modo la password è sicura PASSWORD_DEFAULT serve px
                 $id_ruolo = 2;
                 $saldo = 0.00;
 
@@ -35,10 +35,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $reg_success = "Registrazione completata! Reindirizzamento...";
                 header("Refresh: 2; URL=login.php");
-                exit; // Importante: ferma l'esecuzione dopo il redirect
+                exit; //ferma l'esecuzione dopo il redirect
             }
         } catch (PDOException $e) {
-            // Grazie a PDO::ERRMODE_EXCEPTION in db.php, gli errori DB finiscono qui
+            // con PDO::ERRMODE_EXCEPTION in db.php, gli errori del DB finiscono qui
             $reg_error = "Errore durante la registrazione: " . $e->getMessage();
         }
     }

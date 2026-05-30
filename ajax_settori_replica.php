@@ -1,7 +1,7 @@
 <?php
 require_once 'init.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json'); 
 
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     echo json_encode([
@@ -40,13 +40,13 @@ try {
       AND r.stato <> 'annullata'
     ORDER BY es.prezzo ASC, s.nome ASC
 ";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$id_replica]);
-    $settori = $stmt->fetchAll();
-
-    echo json_encode([
-        'success' => true,
-        'settori' => $settori
+    $stmt = $pdo->prepare($sql); // Prepara la query
+    $stmt->execute([$id_replica]); // Esegue la query con il parametro id_replica
+    $settori = $stmt->fetchAll(); // Recupera tutti i settori associati alla replica
+ 
+    echo json_encode([ // Restituisce i dati in formato JSON
+        'success' => true, // Indica che la richiesta è stata elaborata con successo
+        'settori' => $settori  // Include i dati dei settori nella risposta
     ]);
 } catch (Throwable $e) {
     echo json_encode([

@@ -14,15 +14,15 @@ if ($id_evento <= 0) {
     die('Evento non valido.');
 }
 
-function getUserData(PDO $pdo, string $username): ?array
+function getUserData(PDO $pdo, string $username): ?array // funzione per dati utente
 {
-    $stmt = $pdo->prepare('SELECT id, username, saldo FROM utente WHERE username = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, username, saldo FROM utente WHERE username = ? LIMIT 1'); //query per prendere dati utente
     $stmt->execute([$username]);
-    $user = $stmt->fetch();
+    $user = $stmt->fetch(); // se l'utente esiste, restituisce i dati, altrimenti null
     return $user ?: null;
 }
 
-function getEventoDettaglio(PDO $pdo, int $id_evento): ?array
+function getEventoDettaglio(PDO $pdo, int $id_evento): ?array // funzione per dati evento
 {
     $sql = "
         SELECT 
@@ -33,14 +33,15 @@ function getEventoDettaglio(PDO $pdo, int $id_evento): ?array
             e.stato,
             c.nome AS categoria,
             l.nome AS luogo,
-            l.citta,
-            MIN(r.data_ora_inizio) AS data_evento
+            l.indirizzo,
+            MIN(r.data_ora_inizio) AS DataInizio, 
+            count(r.id) as numero_repliche
         FROM evento e
         JOIN categoria c ON e.id_categoria = c.id
         JOIN luogo l ON e.id_luogo = l.id
         LEFT JOIN replica_evento r ON r.id_evento = e.id
         WHERE e.id = ?
-        GROUP BY e.id, e.titolo, e.descrizione, e.immagine, e.stato, c.nome, l.nome, l.citta
+        GROUP BY e.id, e.titolo, e.descrizione, e.immagine, e.stato, c.nome, l.nome, l.indirizzo
         LIMIT 1
     ";
     $stmt = $pdo->prepare($sql);
@@ -49,7 +50,7 @@ function getEventoDettaglio(PDO $pdo, int $id_evento): ?array
     return $evento ?: null;
 }
 
-function getReplicheEvento(PDO $pdo, int $id_evento): array
+function getReplicheEvento(PDO $pdo, int $id_evento): array // funzione per prendere repliche evento
 {
     $sql = "
         SELECT id, data_ora_inizio, data_ora_fine, stato
@@ -63,7 +64,7 @@ function getReplicheEvento(PDO $pdo, int $id_evento): array
     return $stmt->fetchAll();
 }
 
-function getSettoriReplica(PDO $pdo, int $id_replica): array
+function getSettoriReplica(PDO $pdo, int $id_replica): array // funzione per prendere settori di una replica
 {
     $sql = "
         SELECT 
@@ -85,7 +86,7 @@ function getSettoriReplica(PDO $pdo, int $id_replica): array
     return $stmt->fetchAll();
 }
 
-function getPostiOccupati(PDO $pdo, int $id_evento_settore): array
+function getPostiOccupati(PDO $pdo, int $id_evento_settore): array // funzione per prendere posti occupati di un settore in una replica
 {
     $sql = 'SELECT posto FROM biglietto WHERE id_evento_settore = ? ORDER BY posto ASC';
     $stmt = $pdo->prepare($sql);
@@ -99,7 +100,7 @@ function getPostiOccupati(PDO $pdo, int $id_evento_settore): array
     return $posti;
 }
 
-function formatDataReplica(?string $datetime): string
+function formatDataReplica(?string $datetime): string // funzione per formattare data e ora della replica
 {
     if (!$datetime) {
         return '';
@@ -190,11 +191,9 @@ if ($selectedSettore) {
         <div class="section-heading">
             <h2><?php echo esc($evento['titolo']); ?></h2>
             <p>
-                <?php echo esc($evento['categoria']); ?>
-                ·
                 <?php echo esc($evento['luogo']); ?>
-                <?php if (!empty($evento['citta'])): ?>
-                    - <?php echo esc($evento['citta']); ?>
+                <?php if (!empty($evento['indirizzo'])): ?>
+                    - <?php echo esc($evento['indirizzo']); ?>
                 <?php endif; ?>
             </p>
         </div>
@@ -231,15 +230,6 @@ if ($selectedSettore) {
                     <label>Saldo disponibile</label>
                     <input type="text" value="€ <?php echo number_format((float)$user['saldo'], 2, ',', '.'); ?>" readonly>
                 </div>
-
-                <div class="admin-form-group">
-                    <label>Luogo evento</label>
-                    <input
-                        type="text"
-                        value="<?php echo esc($evento['luogo'] . (!empty($evento['citta']) ? ' - ' . $evento['citta'] : '')); ?>"
-                        readonly
-                    >
-                </div>
             </div>
         </div>
     </section>
@@ -263,9 +253,8 @@ if ($selectedSettore) {
                         <strong><?php echo esc(formatDataReplica($replica['data_ora_inizio'])); ?></strong>
                         <span>
                             <?php if (!empty($replica['data_ora_fine'])): ?>
-                                · Fine <?php echo esc(formatDataReplica($replica['data_ora_fine'])); ?>
                             <?php else: ?>
-                                · Stato <?php echo esc($replica['stato']); ?>
+                                Stato: <?php echo esc($replica['stato']); ?>
                             <?php endif; ?>
                         </span>
                     </div>

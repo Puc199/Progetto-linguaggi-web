@@ -1,5 +1,5 @@
 <?php
-require_once 'init.php';
+require_once 'init.php'; 
 
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     header("Location: login.php");
@@ -24,15 +24,15 @@ $postiRaw = trim((string)($_POST['posti'] ?? ''));
 
 $posti = array_filter(array_map('intval', explode(',', $postiRaw)), fn($p) => $p > 0);
 $posti = array_values(array_unique($posti));
-
+//casi in cui da errore 
 if ($idUtente <= 0 || $username === '' || $idEvento <= 0 || $idEventoSettore <= 0 || empty($posti)) {
     die("Dati acquisto non validi.");
 }
 
 try {
-    $pdo->beginTransaction();
-
-    $stmtES = $pdo->prepare("
+    $pdo->beginTransaction(); 
+    // Seleziona e blocca la riga di evento_settore per evitare race condition
+    $stmtES = $pdo->prepare(" 
         SELECT 
             es.id,
             es.id_evento,
@@ -55,27 +55,28 @@ try {
         LIMIT 1
         FOR UPDATE
     ");
+    //verifica di correttezza di evento e settore
     $stmtES->execute([$idEventoSettore, $idEvento]);
     $eventoSettore = $stmtES->fetch();
 
-    if (!$eventoSettore) {
-        throw new Exception("Evento o settore non valido.");
+    if (!$eventoSettore) { 
+        throw new Exception("Evento o settore non valido."); //se non trova evento o settore, errore
     }
 
-    $prezzoUnitario = (float)$eventoSettore['prezzo'];
-    $quantita = count($posti);
-    $totale = $prezzoUnitario * $quantita;
+    $prezzoUnitario = (float)$eventoSettore['prezzo']; //prende il prezzo unitario del settore
+    $quantita = count($posti); // prende la quantita di posti selezionati
+    $totale = $prezzoUnitario * $quantita; //calcola il totale da pagare che verrà passato a confirmation.php
 
     if ((int)$eventoSettore['posti_disponibili'] < $quantita) {
-        throw new Exception("Posti disponibili insufficienti.");
+        throw new Exception("Posti disponibili insufficienti."); //caso di errore
     }
-
+    //altro caso di errore
     foreach ($posti as $posto) {
         if ($posto > (int)$eventoSettore['posti_totali']) {
             throw new Exception("Uno o più posti selezionati non sono validi.");
         }
     }
-
+    //verifica dei posti occupati
     $placeholders = implode(',', array_fill(0, count($posti), '?'));
     $stmtOccupied = $pdo->prepare("
         SELECT posto
@@ -84,7 +85,7 @@ try {
         FOR UPDATE
     ");
     $stmtOccupied->execute(array_merge([$idEventoSettore], $posti));
-    $occupiedRows = $stmtOccupied->fetchAll();
+    $occupiedRows = $stmtOccupied->fetchAll(); //se ci sono posti occupati, errore con la lista dei posti occupati
 
     if (!empty($occupiedRows)) {
         $occupiedSeats = array_column($occupiedRows, 'posto');
@@ -110,7 +111,7 @@ try {
     if ($saldo < $totale) {
         throw new Exception("Saldo insufficiente.");
     }
-
+        //query per creazione biglietto, inserimento dei dati
     $stmtInsert = $pdo->prepare("
         INSERT INTO biglietto (
             sigillo_fiscale,
@@ -125,10 +126,10 @@ try {
 
     $bigliettiCreati = [];
 
-    foreach ($posti as $posto) {
-        $sigillo = strtoupper(bin2hex(random_bytes(8)));
+    foreach ($posti as $posto) { //per ogni posto selezionato, crea un biglietto con sigillo fiscale univoco
+        $sigillo = strtoupper(bin2hex(random_bytes(8))); //funzione per la generazione del sigillo fiscale
 
-        $stmtInsert->execute([
+        $stmtInsert->execute([ //esegue la query di inserimento del biglietto
             $sigillo,
             $idUtente,
             $idEventoSettore,
@@ -144,13 +145,13 @@ try {
         ];
     }
 
-    $stmtUpdateSaldo = $pdo->prepare("
+    $stmtUpdateSaldo = $pdo->prepare(" 
         UPDATE utente
         SET saldo = saldo - ?
         WHERE id = ?
-    ");
+    "); //aggiorna il saldo dell'utente sottraendo il totale dell'acquisto
     $stmtUpdateSaldo->execute([$totale, $idUtente]);
-
+    //aggiorna i posti disponibili del settore
     $stmtUpdatePosti = $pdo->prepare("
         UPDATE evento_settore
         SET posti_disponibili = posti_disponibili - ?
@@ -158,12 +159,12 @@ try {
     ");
     $stmtUpdatePosti->execute([$quantita, $idEventoSettore]);
 
-    $_SESSION['saldo'] = $saldo - $totale;
-
+    $_SESSION['saldo'] = $saldo - $totale; //aggiorna il saldo in sessione
+    //prepara le informazioni da mostrare nella pagina di conferma acquisto
     $dataOra = $eventoSettore['data_ora_inizio'] ?? null;
     $dataReplica = $dataOra ? date('d/m/Y', strtotime($dataOra)) : 'N/D';
     $oraReplica = $dataOra ? date('H:i', strtotime($dataOra)) : 'N/D';
-
+    //salva in sessione tutte le informazioni necessarie per la pagina di conferma acquisto
     $_SESSION['ticket_info'] = [
         'evento' => $eventoSettore['titolo'],
         'settore' => $eventoSettore['settore_nome'],
@@ -181,9 +182,9 @@ try {
             'username' => $utente['username'] ?? $username
         ]
     ];
-
-    $pdo->commit();
-
+    //
+    $pdo->commit();// se è tutto ok 
+ //reindirizza alla pagina di conferma acquisto
     header("Location: confirmation.php");
     exit();
 } catch (Throwable $e) {

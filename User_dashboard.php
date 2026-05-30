@@ -71,7 +71,8 @@ foreach ($tickets as $t) {
         $bigliettiAnnullati[] = [
             'ticket_id'   => (int)$t['id'],
             'nome_evento' => $t['titolo'],
-            'data_evento' => $t['data_ora_inizio']
+            'data_evento' => $t['data_ora_inizio'],
+            'rimborso_key' => (int)$t['id'] . '_' . (($t['stato_rimborso'] ?? 'none')) . '_' . (int)strtotime($t['data_ora_inizio'] ?? 'now')
         ];
     }
 }
@@ -137,12 +138,11 @@ foreach ($tickets as $t) {
             <div class="tickets-grid" id="tickets-grid">
                 <?php foreach ($tickets as $index => $ticket): ?>
                     <?php
-                    // LOGICA UNIFICATA: annullato O rimborsato = non valido (stesso stile)
+                    //annullato= non valido
                     $isCancelled = ($ticket['stato_evento'] === 'annullato');
                     $isReplicaCancelled = (($ticket['stato_replica'] ?? '') === 'annullata');
                     $isRefunded = ($ticket['stato_rimborso'] === 'rimborsato');
                     
-                    // Unifico tutti gli stati non validi
                     $isNotValid = $isCancelled || $isReplicaCancelled || $isRefunded || ((int)$ticket['disponibilita'] === 0);
                     
                     // in questo modo se un biglietto si vede la grafica del biglietto cancellato 
@@ -228,6 +228,11 @@ foreach ($tickets as $t) {
 <footer class="site-footer">
     <p>&copy; 2026 EasyTicket</p>
 </footer>
+<div
+    id="rimborsi-data"
+    data-rimborsi='<?php echo htmlspecialchars(json_encode($bigliettiAnnullati), ENT_QUOTES, "UTF-8"); ?>'
+    style="display:none;">
+</div>
                             <!--comunica al js che biglietti sono stati annullati-->
 <script src="js/user_dashboard.js" defer></script>
 </body>

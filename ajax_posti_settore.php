@@ -31,9 +31,9 @@ try {
     ");
     $stmt->execute([$id_evento_settore]);
 
-    $postiOccupati = [];
-    foreach ($stmt->fetchAll() as $row) {
-        $postiOccupati[] = (int)$row['posto'];
+    $postiOccupati = []; // Array per memorizzare i posti occupati
+    foreach ($stmt->fetchAll() as $row) { 
+        $postiOccupati[] = (int)$row['posto'];// Aggiunge il posto occupato all'array
     }
 
     echo json_encode([

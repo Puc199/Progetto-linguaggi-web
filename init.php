@@ -27,6 +27,6 @@ aggiornaEventiScaduti($pdo);
 
 // implemento esc() per la sicurezza dei dati 
 function esc($value) {
-    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
-}
-?>
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); // questa funzione previene xss e altri attacchi di iniezione, come query injection, convertendo i caratteri speciali in entità HTML
+} // xss: cross-site scripting, attacco che sfrutta vulnerabilità nei siti web per iniettare codice dannoso, come script, che viene eseguito nel browser degli utenti.
+?> 

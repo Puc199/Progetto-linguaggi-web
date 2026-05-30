@@ -20,7 +20,7 @@ $id_evento = (int)($_GET['id'] ?? 0);
 if ($id_evento <= 0) {
     die('Evento non valido.');
 }
-
+ // salva l'immagine e restituisce il percorso da salvare in DB, stessa funzione di upload usata in admin_dashboard.php
 function salvaImmagine(?array $file): ?string
 {
     if (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
@@ -49,15 +49,15 @@ function salvaImmagine(?array $file): ?string
         throw new Exception("Errore durante il salvataggio dell'immagine.");
     }
 
-    return $percorsoDb;
+    return $percorsoDb; // percorso da salvare in DB
 }
-
+ // Funzione per ottenere i dettagli di un evento, restituisce null se non trovato
 function getEvento(PDO $pdo, int $id_evento): ?array {
     $stmt = $pdo->prepare("SELECT * FROM evento WHERE id = ? LIMIT 1");
     $stmt->execute([$id_evento]);
     return $stmt->fetch() ?: null;
 }
-
+// Funzione per ottenere tutte le repliche di un evento, restituisce un array vuoto se non ci sono repliche
 function getRepliche(PDO $pdo, int $id_evento): array {
     $stmt = $pdo->prepare("
         SELECT id, data_ora_inizio, data_ora_fine, stato
@@ -68,7 +68,7 @@ function getRepliche(PDO $pdo, int $id_evento): array {
     $stmt->execute([$id_evento]);
     return $stmt->fetchAll();
 }
-
+// Funzione per ottenere i settori di un luogo, restituisce un array vuoto se non ci sono settori
 function getSettoriLuogo(PDO $pdo, int $idLuogo): array {
     $stmt = $pdo->prepare("
         SELECT id, nome, descrizione, prezzo_base, posti_totali
@@ -79,17 +79,17 @@ function getSettoriLuogo(PDO $pdo, int $idLuogo): array {
     $stmt->execute([$idLuogo]);
     return $stmt->fetchAll();
 }
-
+// prende la data e la formatta in forma italiana, se vuoto restituisce null
 function formatDataOra(?string $value): string {
     if (!$value) return '';
     return date('d/m/Y H:i', strtotime($value));
 }
-
+//errore eevento non trovato
 $evento = getEvento($pdo, $id_evento);
 if (!$evento) {
     die('Evento non trovato.');
 }
-
+// ottiene i settori del luogo associato all'evento, se presente
 $settoriLuogo = [];
 if (isset($evento['id_luogo']) && (int)$evento['id_luogo'] > 0) {
     $settoriLuogo = getSettoriLuogo($pdo, (int)$evento['id_luogo']);
@@ -98,11 +98,11 @@ if (isset($evento['id_luogo']) && (int)$evento['id_luogo'] > 0) {
 $errore = '';
 $messaggio = '';
 
-if (isset($_GET['success']) && $_GET['success'] === '1') {
+if (isset($_GET['success']) && $_GET['success'] === '1') { //messaggio di successo
     $messaggio = 'Operazione completata con successo.';
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {// verifica quale azione è stata richiesta tramite il campo azione del form
     $azione = trim($_POST['azione'] ?? '');
 
     if ($azione === 'modifica_dettagli_evento') {
@@ -113,10 +113,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($titolo === '') {
                 throw new Exception('Il titolo è obbligatorio.');
             }
-
+            // Gestione immagine: se viene caricata una nuova immagine, salva e usa quella, altrimenti mantieni quella esistente (se presente)
             $nuovaImmagine = salvaImmagine($_FILES['immagine'] ?? null);
             $immagineDaSalvare = $nuovaImmagine ?? ($evento['immagine'] ?? null);
-
+            // Aggiorna i dettagli dell'evento nel database
             $stmt = $pdo->prepare("
                 UPDATE evento
                 SET titolo = ?, descrizione = ?, immagine = ?
@@ -135,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errore = 'Errore durante il salvataggio dei dettagli evento: ' . $e->getMessage();
         }
     }
-
+        // Aggiunta di una nuova replica per l'evento
         if ($azione === 'aggiungi_replica') {
         $dataOraInizio = trim((string)($_POST['data_ora_inizio'] ?? ''));
 
@@ -151,22 +151,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (strlen($dataOraInizioSql) === 16) {
                     $dataOraInizioSql .= ':00';
                 }
-
-                $dataOraFineSql = null;
-                if ($dataOraFine !== '') {
-                    $dataOraFineSql = str_replace('T', ' ', $dataOraFine);
-                    if (strlen($dataOraFineSql) === 16) {
-                        $dataOraFineSql .= ':00';
-                    }
-                }
-
+                // Inserisce la nuova replica
                 $pdo->prepare("
                     INSERT INTO replica_evento (id_evento, data_ora_inizio, data_ora_fine, stato)
                     VALUES (?, ?, ?, 'programmata')
                 ")->execute([$id_evento, $dataOraInizioSql, $dataOraFineSql]);
 
                 $idReplica = (int)$pdo->lastInsertId();
-
+                // Prepara la query di inserimento per evento_settore
                 $stmtInsertES = $pdo->prepare("
                     INSERT INTO evento_settore (
                         id_replica_evento,
@@ -177,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         posti_disponibili
                     ) VALUES (?, ?, ?, ?, ?, ?)
                 ");
-
+                // Per ogni settore del luogo, crea una nuova riga in evento_settore con i dati della replica appena creata
                 foreach ($settoriLuogo as $settore) {
                     $idSettore = (int)$settore['id'];
                     $postiTotali = (int)$settore['posti_totali'];
@@ -208,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-
+    // Annullamento di una replica esistente e rimborso dei biglietti associati
     if ($azione === 'annulla_replica') {
         
     $idReplica = (int)($_POST['id_replica'] ?? 0);
@@ -219,7 +211,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
 
-            // 1. Annulla la replica
+            //Annulla la replica
             $stmt = $pdo->prepare("
                 UPDATE replica_evento
                 SET stato = 'annullata'
@@ -231,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Nessuna replica trovata con questi criteri.');
             }
 
-            // 2. Recupera tutti i biglietti da rimborsare per quella replica
+            // Recupera tutti i biglietti da rimborsare per quella replica
             $stmtRimborsi = $pdo->prepare("
                 SELECT b.id AS id_biglietto, b.id_utente, b.prezzo
                 FROM biglietto b
@@ -248,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 SET saldo = saldo + ?
                 WHERE id = ?
             ");
-
+            // 
             $stmtAggiornaBiglietto = $pdo->prepare("
                 UPDATE biglietto
                 SET disponibilita = 0,
@@ -322,53 +314,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-
-    if ($azione === 'elimina_replica') {
-        $idReplica = (int)($_POST['id_replica'] ?? 0);
-
-        try {
-            if ($idReplica <= 0) {
-                throw new Exception('ID replica non valido.');
-            }
-
-            $pdo->beginTransaction();
-
-            $stmtUpdate = $pdo->prepare("
-                UPDATE biglietto b
-                INNER JOIN evento_settore es ON b.id_evento_settore = es.id
-                SET b.stato_rimborso = 'rimborsato',
-                    b.disponibilita = 0
-                WHERE es.id_replica_evento = ?
-                  AND b.stato_rimborso = 'nessuno'
-            ");
-            $stmtUpdate->execute([$idReplica]);
-
-            $pdo->prepare("
-                DELETE FROM evento_settore
-                WHERE id_replica_evento = ? AND id_evento = ?
-            ")->execute([$idReplica, $id_evento]);
-
-            $stmtDel = $pdo->prepare("
-                DELETE FROM replica_evento
-                WHERE id = ? AND id_evento = ?
-            ");
-            $stmtDel->execute([$idReplica, $id_evento]);
-
-            if ($stmtDel->rowCount() !== 1) {
-                throw new Exception('Replica non trovata o già eliminata.');
-            }
-
-            $pdo->commit();
-
-            header('Location: ' . $_SERVER['PHP_SELF'] . '?id=' . $id_evento . '&success=1');
-            exit();
-        } catch (Throwable $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-            $errore = 'Errore durante l eliminazione: ' . $e->getMessage();
-        }
-    }
 }
 
 $repliche = getRepliche($pdo, $id_evento);
@@ -395,11 +340,6 @@ $repliche = getRepliche($pdo, $id_evento);
 </header>
 
 <main class="page-shell">
-    <section class="section-block">
-        <div class="section-heading">
-            <h2>Modifica evento</h2>
-            <p>Gestisci dettagli e repliche.</p>
-        </div>
 
         <?php if ($errore !== ''): ?>
             <div class="admin-card msg-ko" style="margin-bottom:20px; border-left: 4px solid #dc3545;">
@@ -436,8 +376,8 @@ $repliche = getRepliche($pdo, $id_evento);
 
                 <div class="admin-form-group">
                     <label for="immagine">Immagine evento</label>
-                    <?php if (!empty($evento['immagine'])): ?>
-                        <div style="margin-bottom:10px;">
+                    <?php if (!empty($evento['immagine'])): ?> <!-- Se c'è un'immagine già salvata -->
+                        <div style="margin-bottom:10px;"> 
                             <img src="<?php echo esc($evento['immagine']); ?>" alt="<?php echo esc($evento['titolo'] ?? 'Evento'); ?>" style="max-width:220px; border-radius:8px;">
                         </div>
                     <?php endif; ?>

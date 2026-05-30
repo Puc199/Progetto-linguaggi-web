@@ -1,7 +1,6 @@
 <?php
 require_once 'init.php';
 
-// --- PARTE 1: BACKEND (PHP) ---
 // Se la richiesta è di tipo POST, significa che l'utente ha cliccato "Accedi"
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Diciamo al browser che la nostra risposta sarà un pacchetto dati JSON

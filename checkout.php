@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-$username = $_SESSION['username'] ?? '';
+$username = $_SESSION['username'] ?? ''; // 
 if ($username === '') {
     header("Location: login.php");
     exit();
@@ -40,7 +40,7 @@ if ($idEvento <= 0 || $idEventoSettore <= 0 || empty($posti)) {
     die("Dati checkout non validi.");
 }
 
-try {
+try { // cosi facendo non si rischia di lasciare a metà l'operazione in caso di errore, se qualcosa va storto si fa il rollback e si annullano tutte le modifiche al database
     $stmtUser = $pdo->prepare("
         SELECT id, nome, cognome, username, saldo
         FROM utente
@@ -53,8 +53,8 @@ try {
     if (!$utente) {
         throw new Exception("Utente non trovato.");
     }
-
-    $stmt = $pdo->prepare("
+    // Ottiene i dettagli dell'evento, settore e replica selezionati
+    $stmt = $pdo->prepare(" 
         SELECT 
             es.id,
             es.id_evento,
@@ -84,13 +84,13 @@ try {
     if (!$checkout) {
         throw new Exception("Evento o settore non valido.");
     }
-
+ // Verifica che i posti selezionati siano validi e disponibili
     foreach ($posti as $posto) {
         if ($posto > (int)$checkout['posti_totali']) {
             throw new Exception("Uno o più posti selezionati non sono validi.");
         }
     }
-
+ // Controlla se i posti selezionati sono ancora disponibili
     $placeholders = implode(',', array_fill(0, count($posti), '?'));
     $stmtOccupati = $pdo->prepare("
         SELECT posto
@@ -100,17 +100,17 @@ try {
     $stmtOccupati->execute(array_merge([$idEventoSettore], $posti));
     $occupati = $stmtOccupati->fetchAll();
 
-    if (!empty($occupati)) {
+    if (!empty($occupati)) { // Se ci sono posti occupati, estrai i numeri dei posti e mostra un messaggio di errore
         $postiOccupati = array_column($occupati, 'posto');
         throw new Exception("Alcuni posti non sono più disponibili: " . implode(', ', $postiOccupati));
     }
-
+        // Calcola il totale dell'acquisto e verifica se l'utente ha saldo sufficiente
     $quantita = count($posti);
     $prezzoUnitario = (float)$checkout['prezzo'];
     $totale = $prezzoUnitario * $quantita;
     $saldoUtente = (float)$utente['saldo'];
     $saldoSufficiente = $saldoUtente >= $totale;
-
+ // Prepara i dati per la visualizzazione nel checkout
     $postiStringa = implode(',', $posti);
     $dataEvento = !empty($checkout['data_ora_inizio']) ? date('d/m/Y', strtotime($checkout['data_ora_inizio'])) : 'N/D';
     $oraEvento = !empty($checkout['data_ora_inizio']) ? date('H:i', strtotime($checkout['data_ora_inizio'])) : 'N/D';

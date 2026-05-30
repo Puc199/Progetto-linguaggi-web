@@ -9,7 +9,8 @@ $sql = "
         MIN(r.data_ora_inizio) AS data_evento,
         e.immagine,
         c.nome AS categoria,
-        l.nome AS luogo
+        l.nome AS luogo,
+        count(r.id) AS numero_repliche
     FROM evento e
     JOIN categoria c ON e.id_categoria = c.id
     JOIN luogo l ON e.id_luogo = l.id
@@ -135,6 +136,11 @@ $heroBackground = "img/image.png";
 
                             <div class="event-card-bottom">
                                 <span class="event-action">Vai all'evento</span>
+                                <div class="spacer">
+                                <span class="event-badge">
+                                    <?php echo htmlspecialchars($event['numero_repliche']); ?> repliche
+                                </span>
+                                </div>
                             </div>
                         </article>
                     <?php endforeach; ?>

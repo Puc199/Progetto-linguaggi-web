@@ -8,7 +8,7 @@ if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true || (int)($_S
     exit();
 }
 //gestisce l'input della foto copertina dell'evento
-function salvaImmagine(?array $file): ?string
+function salvaImmagine(?array $file): ?string // restituisce il percorso dell'immagine salvata o null se non viene caricata nessuna immagine
 {   //se non viene caricata una foto resta cosi
     if (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
         return null;
@@ -133,13 +133,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $immagine = salvaImmagine($_FILES['immagine'] ?? null);
 
             $pdo->beginTransaction();
-            //creo evento
+            // evito sql injection con query preparate che separano i dati dalla logica della query
             $stmtEvento = $pdo->prepare("
                 INSERT INTO evento (titolo, descrizione, id_categoria, id_luogo, immagine, stato)
                 VALUES (?, ?, ?, ?, ?, 'programmato')
             ");
-            $stmtEvento->execute([
-                $titolo,
+            $stmtEvento->execute([ // quindi con execute passo i dati in modo sicuro, senza concatenarli direttamente nella query
+                $titolo, 
                 $descrizione !== '' ? $descrizione : null, //salvo come null la descrizione vuota 
                 $id_categoria,
                 $id_luogo,
@@ -192,8 +192,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $id_evento,
                         (int)$settore['id'],
                         $prezzo,
-                        $postiTotali,
-                        $postiTotali
+                        $postiTotali, //posti totali e disponibili sono uguali all'inizio, poi si aggiornano con gli acquisti
+                        $postiTotali 
                     ]);
                 }
 
@@ -236,7 +236,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 UPDATE replica_evento
                 SET stato = 'annullata'
                 WHERE id_evento = ?
-                AND data_ora_inizio > NOW() 
+                AND data_ora_inizio > NOW()
             ");
             $stmtRepliche->execute([$idEvento]);
             // query per gli eventi che devono essere rimborsati
@@ -255,32 +255,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmtRimborsi->execute([$idEvento]);
             $bigliettiDaRimborsare = $stmtRimborsi->fetchAll();
-            //rimborso effettivo
+
+            //query per il rimborso
             $stmtAggiornaSaldo = $pdo->prepare("
                 UPDATE utente
                 SET saldo = saldo + ?
                 WHERE id = ?
-            ");
+            "); 
+            //setto biglietto come rimborsato e non più disponibile
             $stmtAggiornaBiglietto = $pdo->prepare("
                 UPDATE biglietto
                 SET disponibilita = 0,
                     stato_rimborso = 'rimborsato'
                 WHERE id = ?
             ");
-
+            //creo notifica per ogni utente rimborsato
             $stmtNotifica = $pdo->prepare("
                 INSERT INTO notifica (id_utente, titolo, messaggio)
                 VALUES (?, ?, ?)
             ");
-
-            foreach ($bigliettiDaRimborsare as $b) {
-                $importo = (float)$b['prezzo'];
+            // ciclo per ogni biglietto da rimborsare, prende i dati per il rimborso
+            foreach ($bigliettiDaRimborsare as $b) { // 
+                $importo = (float)$b['prezzo']; 
                 $idUtente = (int)$b['id_utente'];
                 $idBiglietto = (int)$b['id_biglietto'];
-
-                $stmtAggiornaSaldo->execute([$importo, $idUtente]);
-                $stmtAggiornaBiglietto->execute([$idBiglietto]);
-
+                
+                $stmtAggiornaSaldo->execute([$importo, $idUtente]); // aggiorno il saldo dell'utente
+                $stmtAggiornaBiglietto->execute([$idBiglietto]); //setto il biglietto come rimborsato
+                //notifica del rimborso
                 $stmtNotifica->execute([
                     $idUtente,
                     'Rimborso automatico effettuato',
@@ -302,7 +304,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 }
 
-$eventi = getEventiAdmin($pdo);
+$eventi = getEventiAdmin($pdo); // recupero dati per la tabella degli eventi esistenti
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -321,9 +323,7 @@ $eventi = getEventiAdmin($pdo);
             <img src="img/logo_sito.png" alt="Logo EasyTicket">
         </a>
         <nav class="user-nav">
-            <a href="admin_dashboard.php" class="user-pill primary-pill">
-                <?php echo esc($_SESSION['username'] ?? 'admin'); ?>
-            </a>
+            <a href="home.php" class="user-pill primary-pill">Home</a>
             <a href="logout.php" class="user-pill secondary-pill">Logout</a>
         </nav>
     </div>

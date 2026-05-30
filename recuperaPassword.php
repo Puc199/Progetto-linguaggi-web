@@ -1,8 +1,8 @@
 <?php
 require_once 'init.php';
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+error_reporting(E_ALL); // Abilita la segnalazione di tutti gli errori
+ini_set('display_errors', 1); // Assicurati che gli errori vengano visualizzati
 
 $messaggio = "";
 $messaggioClasse = "";
@@ -15,13 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $messaggio = "Compila tutti i campi.";
         $messaggioClasse = "alert alert-danger";
     } else {
-        $hashed_password = password_hash($new_password, PASSWORD_BCRYPT);
+        $hashed_password = password_hash($new_password, PASSWORD_BCRYPT); // Hash della nuova password per rendere sicura la memorizzazione nel database    
 
-        $stmt = $pdo->prepare("SELECT id FROM utente WHERE username = ? LIMIT 1");
+        $stmt = $pdo->prepare("SELECT id FROM utente WHERE username = ? LIMIT 1"); 
         $stmt->execute([$user]);
         $idutente = $stmt->fetchColumn();
 
-        if ($idutente) {
+        if ($idutente) { // Se l'utente esiste, aggiorna la password
             $update_stmt = $pdo->prepare("UPDATE utente SET password = ? WHERE id = ?");
             $update_stmt->execute([$hashed_password, $idutente]);
 

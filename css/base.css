@@ -1,6 +1,4 @@
-/* =========================
-VARIABILI GLOBALI
-========================= */
+/*VARIABILI GLOBALI */
 :root {
   --color-primary: #0b5f97;
   --color-primary-dark: #084c79;
@@ -21,9 +19,8 @@ VARIABILI GLOBALI
   --radius-lg: 24px;
 }
 
-/* =========================
-RESET E TAG BASE
-========================= */
+/*RESET E TAG BASE*/
+
 * {
   box-sizing: border-box;
 }
@@ -70,9 +67,8 @@ textarea {
   outline: none;
 }
 
-/* =========================
-HEADER / FOOTER
-========================= */
+
+/*HEADER / FOOTER*/
 .site-header {
   position: sticky;
   top: 0;
@@ -110,9 +106,7 @@ HEADER / FOOTER
   color: var(--color-text-muted);
 }
 
-/* =========================
-LAYOUT COMUNE
-========================= */
+/* LAYOUT COMUNE*/
 .page-shell {
   max-width: min(95%, 1180px);
   margin: 0 auto;
@@ -144,9 +138,7 @@ LAYOUT COMUNE
   line-height: 1.6;
 }
 
-/* =========================
-BOTTONI E LINK RIUTILIZZABILI
-========================= */
+/* BOTTONI E LINK RIUTILIZZABILI*/
 .user-pill {
   text-decoration: none;
   padding: clamp(10px, 1.5vw, 12px) clamp(14px, 2vw, 18px);
@@ -227,9 +219,7 @@ BOTTONI E LINK RIUTILIZZABILI
   transform: translateY(-2px);
 }
 
-/* =========================
-CARD E COMPONENTI GENERICI
-========================= */
+/* CARD E COMPONENTI GENERICI*/
 .admin-card,
 .summary-card,
 .ticket-card,
@@ -261,9 +251,7 @@ CARD E COMPONENTI GENERICI
   margin: 0;
 }
 
-/* =========================
-FORM BASE
-========================= */
+/* FORM BASE*/
 .admin-form-group {
   margin-bottom: clamp(12px, 2vw, 16px);
 }
@@ -309,9 +297,7 @@ FORM BASE
   resize: vertical;
 }
 
-/* =========================
-MESSAGGI / INFO
-========================= */
+/* MESSAGGI / INFO*/
 .success-box,
 .error-box,
 .wallet-message {
@@ -382,9 +368,7 @@ MESSAGGI / INFO
   color: var(--color-text);
 }
 
-/* =========================
-RESPONSIVE GLOBALE
-========================= */
+/* RESPONSIVE GLOBALE*/
 @media (max-width: 980px) {
   .header-inner {
     flex-direction: column;

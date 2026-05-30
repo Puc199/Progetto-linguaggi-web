@@ -60,7 +60,7 @@ unset($_SESSION['ticket_info']);
 </head>
 <body>
 <main class="confirmation-shell">
-    <section class="confirmation-hero card"> <!--messaggio dinamico-->
+    <section class="confirmation-hero card"> <!--messaggio che cambia a seconda del ruolo-->
         <div class="confirmation-badge">Acquisto completato</div>
         <h1>Grazie per il tuo acquisto, <?php echo esc($utente['username'] ?? $username); ?>!</h1>
         <p>
