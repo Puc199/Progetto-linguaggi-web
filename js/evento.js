@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totale = selezionati.length * prezzoUnitario;
         if (purchasePrezzoInput) {
             purchasePrezzoInput.value = '€ ' + totale.toLocaleString('it-IT', {
-                minimumFractionDigits: 2,
+                minimumFractionDigits: 2, 
                 maximumFractionDigits: 2
             });
         } // mostro i posti 
@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         purchaseSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
-    // 3. Validazione form
+    // 3. Validazione form di acquisto
     if (purchaseForm) {
         purchaseForm.addEventListener('submit', function (e) {
             if (!selectedEventoSettore || selectedEventoSettore.value === '0') {
@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            calcolaTotale(); // aggiorna hidden prima dell'invio
+            calcolaTotale(); 
         });
     }
 });

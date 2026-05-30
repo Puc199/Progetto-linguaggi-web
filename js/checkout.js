@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
             timerEl.textContent =
                 String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
         }
-        //caso di tempo scadito
+        //caso di tempo scaduto
         if (secondsLeft <= 0) {
             clearInterval(timerInterval); //ferma il conto alla rovescia
 

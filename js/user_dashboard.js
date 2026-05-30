@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-    // === ELEMENTI DEL DOM ===
+
     const walletForm = document.getElementById('wallet-form');
     const walletMessage = document.getElementById('wallet-message');
     const walletSaldo = document.getElementById('wallet-saldo');
@@ -8,9 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const ticketsGrid = document.querySelector('.tickets-grid');
     const ticketsSection = document.querySelector('.tickets-section');
 
-    // ==========================================
-    // 1️⃣ GESTIONE RICARICA WALLET
-    // ==========================================
+    //GESTIONE RICARICA WALLET
     if (walletForm) {
         walletForm.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -45,20 +43,20 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // ==========================================
-    // 2️⃣ GESTIONE ELIMINAZIONE BIGLIETTO
-    // ==========================================
+
+    //GESTIONE ELIMINAZIONE BIGLIETTO
+
     document.querySelectorAll('.delete-ticket-btn').forEach(button => {
         button.addEventListener('click', async function () {
             const ticketId = this.dataset.ticketId;
             if (!ticketId) return;
-            if (!confirm('Vuoi davvero eliminare questo biglietto e ricevere il rimborso?')) return;
+            if (!confirm('Vuoi davvero eliminare questo biglietto e ricevere il rimborso?')) return; // messaggio di conferma per l'admin
 
             try {
-                const response = await fetch('delete_ticket.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: ticketId })
+                const response = await fetch('delete_ticket.php', { // Effettua la richiesta di eliminazione al server
+                    method: 'POST', // Usa POST per inviare i dati in modo sicuro
+                    headers: { 'Content-Type': 'application/json' }, // Specifica che stiamo inviando JSON
+                    body: JSON.stringify({ id: ticketId }) // Invia l'ID del biglietto da eliminare al server
                 });
                 const data = await response.json();
 
@@ -89,33 +87,41 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // ==========================================
-    // 3️⃣ NOTIFICA RIMBORSO (Dati iniettati da PHP)
-    // ==========================================
-    const rimborsiEl = document.getElementById('rimborsi-data');
-    if (rimborsiEl) {
-        try {
-            const rimborsiRaw = rimborsiEl.dataset.rimborsi;
-            const rimborsiDaNotificare = JSON.parse(rimborsiRaw || '[]');
 
-            rimborsiDaNotificare.forEach(biglietto => {
-                const storageKey = 'rimborso_visto_' + biglietto.ticket_id;
-                if (!localStorage.getItem(storageKey)) {
-                    const dataFormattata = new Date(biglietto.data_evento).toLocaleString('it-IT', {
-                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                    });
-                    alert(`🔔 NOTIFICA RIMBORSO:\n\nL'evento "${biglietto.nome_evento}" del ${dataFormattata} è stato annullato.\nIl rimborso è stato accreditato sul tuo Wallet.`);
-                    localStorage.setItem(storageKey, 'true');
-                }
-            });
-        } catch (e) {
-            console.error("Errore nella lettura dei rimborsi:", e);
-        }
+    //NOTIFICA RIMBORSO (Dati iniettati da PHP)
+
+const rimborsiEl = document.getElementById('rimborsi-data');
+
+if (rimborsiEl) {
+    try {
+        const rimborsiRaw = rimborsiEl.dataset.rimborsi;
+        const rimborsiDaNotificare = JSON.parse(rimborsiRaw || '[]');
+
+        rimborsiDaNotificare.forEach(biglietto => {
+            const storageKey = 'rimborso_visto_' + biglietto.rimborso_key;
+
+            if (!localStorage.getItem(storageKey)) {
+                const dataFormattata = new Date(biglietto.data_evento).toLocaleString('it-IT', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                alert(
+                    `🔔 NOTIFICA RIMBORSO:\n\nL'evento "${biglietto.nome_evento}" del ${dataFormattata} è stato annullato.\nIl rimborso è stato accreditato sul tuo Wallet.`
+                );
+
+                localStorage.setItem(storageKey, 'true');
+            }
+        });
+    } catch (e) {
+        console.error('Errore nella lettura dei rimborsi:', e);
     }
+}
+    //NASCONDI / MOSTRA BIGLIETTI (Client-Side)
 
-    // ==========================================
-    // 4️⃣ NASCONDI / MOSTRA BIGLIETTI (Client-Side)
-    // ==========================================
     let hiddenTickets = JSON.parse(localStorage.getItem('hiddenTickets') || '[]');
 
     // Funzione per mostrare/nascondere la empty-card quando tutti i biglietti sono nascosti
@@ -135,9 +141,9 @@ document.addEventListener('DOMContentLoaded', function () {
             emptyCard.className = 'empty-card empty-card-dynamic';
             emptyCard.innerHTML = `
                 <h3>Nessun biglietto visibile</h3>
-                <p>Hai nascosto tutti i biglietti. Clicca sul pulsante sopra per mostrarli di nuovo.</p>
+                <p>Hai nascosto tutti i biglietti. Clicca sul pulsante sotto per mostrarli di nuovo.</p>
                 <button type="button" id="show-all-from-empty" class="hero-cta" style="border:none;cursor:pointer;background:#0b5f97;color:white;padding:10px 20px;border-radius:6px;">
-                    👁️ Mostra tutti i biglietti
+                     Mostra tutti i biglietti
                 </button>
             `;
             ticketsSection?.appendChild(emptyCard);
@@ -177,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateEmptyCardVisibility();
     }
 
-    // Listener per pulsanti "👁️ Nascondi" su singole card
+    // Listener per pulsanti " Nascondi" su singole card
     document.querySelectorAll('.hide-ticket-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             const ticketId = this.dataset.ticketId;

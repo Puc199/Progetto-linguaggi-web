@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => { 
     const buttons = document.querySelectorAll('.category-item'); // prendo tutti i pulsanti delle categorie
     const cards = document.querySelectorAll('.event-card'); // e tutte le card evento
 
